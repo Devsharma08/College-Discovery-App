@@ -13,7 +13,7 @@ const CACHE_TTL_MS = 60_000;
 const cache = new Map<string, { expiresAt: number; payload: unknown }>();
 
 app.disable('x-powered-by');
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173' }));
+app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'https://college-discovery-app-pzv7-git-main-users-projects-426e2b02.vercel.app' || 'https://college-discovery-app-pzv7-c2vkitnxg-users-projects-426e2b02.vercel.app' }));
 app.use(express.json({ limit: '64kb' }));
 
 const getCached = <T>(key: string): T | null => {
