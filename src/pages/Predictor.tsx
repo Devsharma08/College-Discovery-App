@@ -2,7 +2,6 @@ import React from 'react';
 import { MapPin, Star, GraduationCap, Sparkles, Filter, ArrowRight, BrainCircuit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { usePredictor, type PredictedCollege } from '../context/PredictorContext';
-import type { College } from '../types';
 import AdmissionPredictor from '../components/AdmissionPredictor';
 
 
