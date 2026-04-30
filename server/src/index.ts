@@ -331,11 +331,14 @@ app.post('/api/ai/analyze-comparison', async (req, res) => {
     const prompt = `You are a professional college counselor. Analyze these colleges for a student: ${collegeDataStr}. 
     Highlight the pros and cons of each and recommend the best one based on different student priorities (budget, reputation, academics). Keep it concise and professional.`;
 
-    const response = await axios.post(GEMINI_URL, {
-      contents: [{ parts: [{ text: prompt }] }]
+    const response = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
+    const data = await response.json();
 
-    const aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     res.json({ analysis: aiResponse });
   } catch (error) {
     console.error('AI Analysis Error:', error);
@@ -362,11 +365,14 @@ app.post('/api/ai/predictor', async (req, res) => {
     
     Format your response as a JSON object: {"percent": number, "assessment": "string", "advice": "string"}. Return ONLY the JSON.`;
 
-    const response = await axios.post(GEMINI_URL, {
-      contents: [{ parts: [{ text: prompt }] }]
+    const response = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
     });
+    const data = await response.json();
 
-    let aiResponse = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+    let aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
     // Clean JSON if needed
     aiResponse = aiResponse.replace(/```json|```/g, '').trim();
     
