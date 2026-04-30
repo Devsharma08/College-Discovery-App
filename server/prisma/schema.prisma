@@ -1,0 +1,93 @@
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+
+model User {
+  id          String                   @id @default(uuid())
+  username    String
+  preferences UserCollegePreferences[]
+  questions   Question[]               
+  answers     Answer[]                
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  text      String
+  collegeId String                  
+  college   College  @relation(fields: [collegeId], references: [id])
+  createdAt DateTime @default(now())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  answers   Answer[]                 
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  text       String
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  createdAt  DateTime @default(now())
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+}
+
+model College {
+  id          String                   @id @default(uuid())
+  name        String
+  location    String
+  state       String?
+  city        String?
+  rating      Float
+  fees        Int
+  popularFor  String
+  imgUrl      String
+  details     CollegeDetails?
+  preferences UserCollegePreferences[]
+  cutoffs     Cutoff[]
+  questions   Question[]               
+
+  @@index([state])
+  @@index([city])
+  @@index([rating])
+  @@index([name])
+}
+
+
+model CollegeDetails {
+  id          String  @id @default(uuid())
+  collegeId   String  @unique
+  description String
+  imageUrl    String
+  programs    String
+  college     College @relation(fields: [collegeId], references: [id])
+}
+
+model UserCollegePreferences {
+  id        String  @id @default(uuid())
+  userId    String
+  collegeId String
+  user      User    @relation(fields: [userId], references: [id])
+  college   College @relation(fields: [collegeId], references: [id])
+}
+
+
+model Cutoff {
+  id        String  @id @default(uuid())
+  collegeId String
+  examName  String
+  maxRank   Int
+  category  String?
+  college   College @relation(fields: [collegeId], references: [id])
+
+  @@index([examName, maxRank])
+  @@index([collegeId])
+}
