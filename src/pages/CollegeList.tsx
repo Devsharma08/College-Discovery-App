@@ -1,4 +1,4 @@
-import React, { useMemo, useState,useEffect,useRef,useCallback } from 'react';
+import React, { useState,useEffect,useRef,useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Bookmark, Filter, Loader2, MapPin, Scale, Search, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';

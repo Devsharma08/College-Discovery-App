@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+/* axios removed */
 import { Sparkles, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 import type { College } from '../types';
 
@@ -17,8 +17,13 @@ const AIComparisonSummary: React.FC<AIComparisonSummaryProps> = ({ colleges }) =
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post('http://localhost:5000/api/ai/analyze-comparison', { colleges });
-      setAnalysis(response.data.analysis);
+      const response = await fetch('http://localhost:5000/api/ai/analyze-comparison', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colleges })
+      });
+      const data = await response.json();
+      setAnalysis(data.analysis);
     } catch (err) {
       setError('Failed to generate AI analysis. Please try again.');
     } finally {

@@ -1,19 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { BrainCircuit, Loader2, Sparkles, AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react';
 import { API_URL } from '../config';
-import { usePredictor } from '../context/PredictorContext';
+import { usePredictor, type PredictedCollege } from '../context/PredictorContext';
 import type { College } from '../types';
 
 interface AdmissionPredictorProps {
   collegeId?: string;
   initialExam?: string;
   className?: string;
-  onResultsFound?: (colleges: College[]) => void;
+  onResultsFound?: (colleges: PredictedCollege[]) => void;
 }
 
 const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({ 
   collegeId, 
-  initialExam = 'Entrance',
   className = '',
   onResultsFound
 }) => {

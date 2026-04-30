@@ -1,23 +1,15 @@
 import React from 'react';
 import { MapPin, Star, GraduationCap, Sparkles, Filter, ArrowRight, BrainCircuit } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { usePredictor } from '../context/PredictorContext';
+import { usePredictor, type PredictedCollege } from '../context/PredictorContext';
+import type { College } from '../types';
 import AdmissionPredictor from '../components/AdmissionPredictor';
 
-type PredictedCollege = College & {
-  matchPercent?: number;
-  aiMatchReason?: string;
-  matchedCutoff?: {
-    examName: string;
-    maxRank: number;
-    category?: string | null;
-  };
-};
 
 const Predictor: React.FC = () => {
   const { results, setResults, hasSearched, setHasSearched } = usePredictor();
 
-  const handleResults = (results: College[]) => {
+  const handleResults = (results: PredictedCollege[]) => {
     setResults(results);
     setHasSearched(true);
   };

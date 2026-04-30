@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+/* axios removed */
 import { X, Send, Sparkles, User, Bot, Minimize2 } from 'lucide-react';
 
 const AIChatAssistant: React.FC = () => {
@@ -30,8 +30,13 @@ const AIChatAssistant: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/ai/chat', { prompt: userMessage });
-      setMessages(prev => [...prev, { role: 'bot', content: response.data.response }]);
+      const response = await fetch('http://localhost:5000/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userMessage })
+      });
+      const data = await response.json();
+      setMessages(prev => [...prev, { role: 'bot', content: data.response }]);
     } catch (error) {
       setMessages(prev => [...prev, { role: 'bot', content: 'Sorry, I\'m having trouble connecting to my brain. Please try again later.' }]);
     } finally {

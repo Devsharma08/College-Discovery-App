@@ -1,5 +1,16 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { College } from '../types';
+
+export type PredictedCollege = College & {
+  matchPercent?: number;
+  aiMatchReason?: string;
+  matchedCutoff?: {
+    examName: string;
+    maxRank: number;
+    category?: string | null;
+  };
+};
 
 interface PredictorContextType {
   rank: string;
@@ -8,8 +19,8 @@ interface PredictorContextType {
   setExam: (exam: string) => void;
   category: string;
   setCategory: (category: string) => void;
-  results: College[];
-  setResults: (results: College[]) => void;
+  results: PredictedCollege[];
+  setResults: (results: PredictedCollege[]) => void;
   hasSearched: boolean;
   setHasSearched: (val: boolean) => void;
 }
@@ -20,7 +31,7 @@ export const PredictorProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [rank, setRank] = useState('');
   const [exam, setExam] = useState('Entrance');
   const [category, setCategory] = useState('General');
-  const [results, setResults] = useState<College[]>([]);
+  const [results, setResults] = useState<PredictedCollege[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
 
   return (
