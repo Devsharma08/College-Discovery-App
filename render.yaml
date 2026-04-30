@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: campusfinder-api
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: pnpm install && npx prisma generate && pnpm run build
+    startCommand: pnpm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
