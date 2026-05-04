@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 /* axios removed */
+import { API_URL } from '../config';
 import { Sparkles, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 import type { College } from '../types';
 
@@ -17,7 +18,7 @@ const AIComparisonSummary: React.FC<AIComparisonSummaryProps> = ({ colleges }) =
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:5000/api/ai/analyze-comparison', {
+      const response = await fetch(`${API_URL}/api/ai/analyze-comparison`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ colleges })

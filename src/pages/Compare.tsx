@@ -17,7 +17,39 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
   const [userExam, setUserExam] = useState<string>('Entrance');
   const [aiChances, setAiChances] = useState<Record<string, { percent: number, assessment: string }>>({});
   const [predicting, setPredicting] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [streaming, setStreaming] = useState(false);
   const compareIds = useMemo(() => compareList.map((college) => college.id), [compareList]);
+
+  const handleAiSummary = async () => {
+    if (detailedColleges.length === 0) return;
+    setStreaming(true);
+    setAiSummary('');
+
+    try {
+      const response = await fetch(`${API_URL}/api/ai/stream-comparison`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colleges: detailedColleges })
+      });
+
+      if (!response.body) throw new Error('No stream body');
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setAiSummary((prev) => prev + decoder.decode(value));
+      }
+    } catch (err) {
+      console.error(err);
+      setAiSummary('Failed to fetch AI summary.');
+    } finally {
+      setStreaming(false);
+    }
+  };
 
   const calculateChance = (rank: number, cutoffRank?: number) => {
     if (!cutoffRank) return { percent: 0, assessment: 'No cutoff data available' };
@@ -208,6 +240,7 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
                   ))}
                 </tr>
 
+
                 {/* Rating */}
                 <tr>
                   <td className="py-8 px-8 align-top">
@@ -254,7 +287,7 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
                   {detailedColleges.map((college) => (
                     <td key={college.id} className="py-8 px-8">
                       <div className="flex flex-wrap gap-2">
-                        {college.details?.programs.split(',').map((p, i) => (
+                        {college.details?.programs?.split(',').map((p, i) => (
                           <span key={i} className="text-[10px] font-bold bg-slate-50 border border-slate-100 text-slate-500 px-2.5 py-1 rounded-lg">
                             {p.trim()}
                           </span>
@@ -315,8 +348,30 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto pt-8">
-        
+      <div className="max-w-5xl mx-auto pt-8 pb-20">
+        <div className="surface p-8 rounded-[2rem] shadow-sm border border-emerald-100 bg-emerald-50/10">
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles className="w-8 h-8 text-emerald-600" />
+            <h2 className="text-2xl font-black text-slate-900">AI Counselor <span className="text-emerald-600">Summary</span></h2>
+          </div>
+          
+          <div className="prose prose-slate max-w-none text-slate-700">
+            {aiSummary ? (
+              <div className="whitespace-pre-wrap">{aiSummary}</div>
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-slate-500 mb-6">Get a professional, AI-generated comparison of these colleges based on fees, academics, and placements.</p>
+                <button 
+                  onClick={handleAiSummary}
+                  disabled={streaming}
+                  className="btn-primary px-8 py-3 mx-auto flex items-center gap-2 disabled:opacity-50"
+                >
+                  {streaming ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Generate AI Summary'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

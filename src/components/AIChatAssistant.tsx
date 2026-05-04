@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 /* axios removed */
+import { API_URL } from '../config';
 import { X, Send, Sparkles, User, Bot, Minimize2 } from 'lucide-react';
 
 const AIChatAssistant: React.FC = () => {
@@ -30,7 +31,7 @@ const AIChatAssistant: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/ai/chat', {
+      const response = await fetch(`${API_URL}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: userMessage })

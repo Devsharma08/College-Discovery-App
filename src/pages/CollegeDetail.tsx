@@ -34,6 +34,12 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState('');
 
+  // Sub-resources states
+  const [courses, setCourses] = useState<any[]>([]);
+  const [placements, setPlacements] = useState<any[]>([]);
+  const [facilities, setFacilities] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<any[]>([]);
+
 
   const supabaseClient = supabase;
 
@@ -42,10 +48,26 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
       setLoading(true)
       try {
         const response = await fetch(`${API_URL}/api/colleges/${id}`);
+        if (!response.ok) {
+          setCollege(null);
+          return;
+        }
         const data = await response.json();
         setCollege(data);
-      } catch (error) {
 
+        // Fetch sub-resources in parallel
+        const [courseRes, placeRes, facRes, revRes] = await Promise.all([
+          fetch(`${API_URL}/api/colleges/${id}/courses`).catch(() => null),
+          fetch(`${API_URL}/api/colleges/${id}/placements`).catch(() => null),
+          fetch(`${API_URL}/api/colleges/${id}/facilities`).catch(() => null),
+          fetch(`${API_URL}/api/colleges/${id}/reviews`).catch(() => null),
+        ]);
+
+        if (courseRes?.ok) setCourses(await courseRes.json());
+        if (placeRes?.ok) setPlacements(await placeRes.json());
+        if (facRes?.ok) setFacilities(await facRes.json());
+        if (revRes?.ok) setReviews(await revRes.json());
+      } catch (error) {
         toast.error("Failed to fetch college details", { id: `college-detail-error-${id}` });
       } finally {
         setLoading(false)
@@ -157,7 +179,15 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
     </div>
   );
 
-  if (!college) return <div>College not found</div>;
+  if (!college) return (
+    <div className="flex flex-col items-center justify-center py-40 gap-4">
+      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+        <Info className="w-8 h-8 text-red-500" />
+      </div>
+      <h2 className="text-2xl font-black text-slate-800">College Not Found</h2>
+      <p className="text-slate-500 text-center max-w-sm">The college you are looking for doesn't exist or has been removed from our database.</p>
+    </div>
+  );
 
   return (
     <div className="animate-page-in space-y-10">
@@ -219,32 +249,80 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
             <h2 className="text-2xl font-black flex items-center gap-3">
               <BookOpen className="text-[#31572c]" /> Academic Programs
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {college.details?.programs.split(',').map((prog, idx) => (
-                <div key={idx} className="flex items-center gap-3 p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100">
-                  <div className="bg-white p-2 rounded-lg shadow-sm">
-                    <GraduationCap className="w-5 h-5 text-[#31572c]" />
+            {courses && courses.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {courses.map((c, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white p-2 rounded-lg shadow-sm">
+                        <GraduationCap className="w-5 h-5 text-[#31572c]" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-700 block">{c.name}</span>
+                        <span className="text-xs text-slate-500">{c.durationInYears} Years • {c.level}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-[#31572c] block">Rs. {c.tuitionFee?.toLocaleString() || 'N/A'}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">{c.seatsAvailable} Seats</span>
+                    </div>
                   </div>
-                  <span className="font-semibold text-slate-700">{prog.trim()}</span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {college.details?.programs?.split(',').map((prog, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100">
+                    <div className="bg-white p-2 rounded-lg shadow-sm">
+                      <GraduationCap className="w-5 h-5 text-[#31572c]" />
+                    </div>
+                    <span className="font-semibold text-slate-700">{prog.trim()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* Placements & Rank (Placeholder Logic) - hardcoded values */}
+          {/* Placements & Facilities */}
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-[#203d1f] to-[#31572c] p-8 rounded-3xl text-white shadow-xl">
-              <Trophy className="w-10 h-10 mb-4 opacity-50" />
-              <h3 className="text-xl font-bold mb-2">NIRF Ranking</h3>
-              <p className="text-4xl font-black">#12</p>
-              <p className="text-emerald-50/75 mt-2 text-sm">Consistent performer in Top 20 institutes in India.</p>
-            </div>
-            <div className="surface p-8 rounded-3xl">
-              <Scale className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Placements</h3>
-              <p className="text-4xl font-black text-[#0e7490]">92%</p>
-              <p className="text-slate-500 mt-2 text-sm">Average package of Rs. 12.5 LPA for the 2023 batch.</p>
-            </div>
+            {placements && placements.length > 0 ? (
+              <div className="surface p-8 rounded-3xl">
+                <Scale className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Placements ({placements[0].year})</h3>
+                <p className="text-4xl font-black text-[#0e7490]">{placements[0].placementPercentage}%</p>
+                <p className="text-slate-500 mt-2 text-sm">Avg: Rs. {(placements[0].averagePackage / 100000).toFixed(1)} LPA</p>
+                <p className="text-slate-500 text-sm">High: Rs. {(placements[0].highestPackage / 100000).toFixed(1)} LPA</p>
+                <p className="text-slate-400 text-xs mt-3 line-clamp-2">Top Recruiters: {placements[0].topRecruiters?.join(', ')}</p>
+              </div>
+            ) : (
+              <div className="surface p-8 rounded-3xl">
+                <Scale className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Placements</h3>
+                <p className="text-4xl font-black text-[#0e7490]">92%</p>
+                <p className="text-slate-500 mt-2 text-sm">Average package of Rs. 12.5 LPA for the 2023 batch.</p>
+              </div>
+            )}
+
+            {facilities && facilities.length > 0 ? (
+              <div className="bg-gradient-to-br from-[#203d1f] to-[#31572c] p-8 rounded-3xl text-white shadow-xl">
+                <Trophy className="w-10 h-10 mb-4 opacity-50" />
+                <h3 className="text-xl font-bold mb-4">Top Facilities</h3>
+                <div className="flex flex-wrap gap-2">
+                  {facilities.slice(0, 5).map((f, i) => (
+                    <span key={i} className="bg-white/20 text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
+                      {f.facility?.name || f.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-[#203d1f] to-[#31572c] p-8 rounded-3xl text-white shadow-xl">
+                <Trophy className="w-10 h-10 mb-4 opacity-50" />
+                <h3 className="text-xl font-bold mb-2">NIRF Ranking</h3>
+                <p className="text-4xl font-black">#12</p>
+                <p className="text-emerald-50/75 mt-2 text-sm">Consistent performer in Top 20 institutes in India.</p>
+              </div>
+            )}
           </section>
         </div>
 
@@ -392,6 +470,41 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
           )}
         </div>
       </section>
+
+      {/* Reviews Section */}
+      {reviews && reviews.length > 0 && (
+        <section className="surface p-8 rounded-3xl space-y-8 mt-12">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold flex items-center gap-3">
+              <Star className="text-amber-500" /> Student Reviews
+            </h2>
+            <span className="text-sm font-medium text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
+              {reviews.length} Reviews
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {reviews.map((r: any) => (
+              <div key={r.id} className="p-6 bg-white/82 border border-slate-100 rounded-2xl shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 font-bold text-xs">
+                      {r.user?.username?.[0] || 'U'}
+                    </div>
+                    <span className="font-bold text-slate-800 text-sm">{r.user?.username || 'Student'}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    <span className="font-bold text-sm">{r.rating}/5</span>
+                  </div>
+                </div>
+                <p className="text-slate-600 text-sm italic">"{r.comment}"</p>
+                <span className="text-[10px] text-slate-400 block">{new Date(r.createdAt).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
     </div>
 

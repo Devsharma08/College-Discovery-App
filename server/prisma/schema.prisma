@@ -1,5 +1,3 @@
-
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,23 +8,71 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-
 model User {
-  id          String                   @id @default(uuid())
-  username    String
-  preferences UserCollegePreferences[]
-  questions   Question[]               
-  answers     Answer[]                
+  id              String                   @id @default(uuid())
+  username        String                   @unique
+  email           String?                  @unique
+  password        String?                  // Hashed password for auth
+  role            String                   @default("STUDENT") // STUDENT, ADMIN, COLLEGE_REP
+  avatarUrl       String?
+  
+  profile         UserProfile?
+  academicRecords UserAcademicRecord[]
+  reviews         Review[]
+  
+  preferences     UserCollegePreferences[]
+  questions       Question[]               
+  answers         Answer[]                
+  
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+}
+
+model UserProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // 1. Basic Details
+  fullName          String?
+  mobileNumber      String?
+  gender            String?
+  city              String?
+  
+  // 2. Journey / Intent
+  studyDestination  String?  // e.g., "India", "Abroad"
+  currentStatus     String?  // e.g., "Aspirant"
+  courseInterested  String?  // e.g., "MBBS - Bachelors (Medicine and Surgery)"
+  
+  // 3. Complex Data (Stored as JSON arrays for flexibility)
+  educationDetails  Json?    // e.g., [{ degree: "12th", school: "DPS", year: 2023, percentage: 95 }]
+  experienceDetails Json?    // e.g., [{ company: "Hospital", role: "Intern", duration: "6 months" }]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model UserAcademicRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  examName  String   // e.g., "JEE Main", "NEET"
+  score     Float?
+  rank      Int?
+  category  String?  // e.g., "General", "OBC", "SC/ST"
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Question {
   id        String   @id @default(uuid())
   text      String
   collegeId String                  
-  college   College  @relation(fields: [collegeId], references: [id])
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   answers   Answer[]                 
 }
 
@@ -34,26 +80,33 @@ model Answer {
   id         String   @id @default(uuid())
   text       String
   questionId String
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now())
   authorId   String
-  author     User     @relation(fields: [authorId], references: [id])
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
 model College {
-  id          String                   @id @default(uuid())
-  name        String
-  location    String
-  state       String?
-  city        String?
-  rating      Float
-  fees        Int
-  popularFor  String
-  imgUrl      String
-  details     CollegeDetails?
-  preferences UserCollegePreferences[]
-  cutoffs     Cutoff[]
-  questions   Question[]               
+  id             String                   @id @default(uuid())
+  name           String
+  location       String
+  state          String?
+  city           String?
+  rating         Float
+  fees           Int
+  popularFor     String
+  imgUrl         String
+  details        CollegeDetails?
+  preferences    UserCollegePreferences[]
+  cutoffs        Cutoff[]
+  questions      Question[]               
+  
+  // New Relations
+  reviews        Review[]
+  courses        Course[]
+  placementStats PlacementStat[]
+  facilities     CollegeFacility[]
+  events         Event[]
 
   @@index([state])
   @@index([city])
@@ -61,24 +114,22 @@ model College {
   @@index([name])
 }
 
-
 model CollegeDetails {
   id          String  @id @default(uuid())
   collegeId   String  @unique
   description String
   imageUrl    String
   programs    String
-  college     College @relation(fields: [collegeId], references: [id])
+  college     College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 }
 
 model UserCollegePreferences {
   id        String  @id @default(uuid())
   userId    String
   collegeId String
-  user      User    @relation(fields: [userId], references: [id])
-  college   College @relation(fields: [collegeId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 }
-
 
 model Cutoff {
   id        String  @id @default(uuid())
@@ -86,8 +137,81 @@ model Cutoff {
   examName  String
   maxRank   Int
   category  String?
-  college   College @relation(fields: [collegeId], references: [id])
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([examName, maxRank])
+  @@index([collegeId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  collegeId String
+  userId    String
+  rating    Float
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([userId])
+}
+
+model Course {
+  id              String   @id @default(uuid())
+  collegeId       String
+  name            String   // e.g., "B.Tech Computer Science"
+  level           String   // e.g., "UG", "PG", "Diploma"
+  durationInYears Int
+  tuitionFee      Int
+  seatsAvailable  Int?
+  
+  college         College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+}
+
+model PlacementStat {
+  id                  String   @id @default(uuid())
+  collegeId           String
+  year                Int
+  highestPackage      Float?   // e.g., 42.5 (in LPA)
+  averagePackage      Float?   // e.g., 12.0 (in LPA)
+  placementPercentage Float?   // e.g., 95.5 (%)
+  topRecruiters       String[] // PostgreSQL string array
+  
+  college             College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+}
+
+model Facility {
+  id        String             @id @default(uuid())
+  name      String             @unique // e.g., "Hostel", "Library"
+  iconUrl   String?
+  colleges  CollegeFacility[]
+}
+
+model CollegeFacility {
+  collegeId  String
+  facilityId String
+  college    College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  facility   Facility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+
+  @@id([collegeId, facilityId])
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  collegeId   String
+  title       String
+  description String?
+  date        DateTime
+  type        String   // e.g., "Application Deadline", "Fest", "Webinar"
+  
+  college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
   @@index([collegeId])
 }

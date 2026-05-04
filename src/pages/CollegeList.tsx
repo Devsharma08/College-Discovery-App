@@ -1,9 +1,8 @@
-import React, { useState,useEffect,useRef,useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Bookmark, Filter, Loader2, MapPin, Scale, Search, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { College } from '../types';
-import { useCollegeHome } from '../context/collegeHome';
 import { getCollegeImage } from '../lib/collegeImages';
 import { API_URL } from '../config';
 
@@ -13,81 +12,130 @@ interface CollegeListProps {
   savedIds: Set<string>;
 }
 
+const LIMIT = 20;
+
 const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, savedIds }) => {
   const [search, setSearch] = useState('');
-  const { colleges, setColleges, loading } = useCollegeHome();
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const LIMIT = 12;
+  // Own local state — independent from context so filters don't race
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // implementing infinite scrolling
-  const [page,setPage] = useState(1);
-  const [hasMore,setHasMore] = useState(true);
-  const [loadingMore,setLoadingMore] = useState(false);
+  // Infinite scroll state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const observer = useRef<IntersectionObserver|null>(null);
+  const observer = useRef<IntersectionObserver | null>(null);
 
-  // implementing Insersction Observer for infinite scrolling
-  const lastElementRef = useCallback((node:HTMLDivElement)=>{
-    // if loading more or has no more colleges to load, return
-    if(loadingMore || !hasMore) return;
+  // Intersection Observer for infinite scrolling
+  const lastElementRef = useCallback(
+    (node: HTMLDivElement) => {
+      if (loadingMore || !hasMore) return;
+      if (observer.current) observer.current.disconnect();
 
-    // if there is an existing observer, disconnect it
-    if(observer.current) observer.current.disconnect();
-
-    // define observer 
-    observer.current = new IntersectionObserver((entries)=>{
-        if(entries[0].isIntersecting && hasMore && !loadingMore){
-          setLoadingMore(true);
-          setPage(prev=>prev + 1);
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          setPage((prev) => prev + 1);
         }
-  })
-    
-      if(node) observer.current.observe(node);
-  },[loadingMore,hasMore])
+      });
 
-useEffect(() => {
+      if (node) observer.current.observe(node);
+    },
+    [loadingMore, hasMore]
+  );
+
+  // Filter state
+  const [maxFees, setMaxFees] = useState<number | ''>('');
+  const [course, setCourse] = useState('');
+  const [state, setStateLoc] = useState('');
+  const [city, setCity] = useState('');
+  const [facility, setFacility] = useState('');
+  const [sort, setSort] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Dynamic filter options from backend
+  const [availableStates, setAvailableStates] = useState<string[]>([]);
+  const [availableFacilities, setAvailableFacilities] = useState<string[]>([]);
+
+  // Fetch filter meta once
+  useEffect(() => {
+    fetch(`${API_URL}/api/colleges/meta/filters`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.states) setAvailableStates(data.states);
+        if (data.facilities) setAvailableFacilities(data.facilities);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Debounce search input (500ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Main data fetcher — fires whenever page or any filter changes
+  useEffect(() => {
+    let ignore = false;
+
     const loadData = async () => {
-      // If it's page 1 and we already have colleges but no filters, we can skip initial load
-      // But for simplicity and to handle filters, let's just fetch if page is 1 and it's a "reset" or filter change
-      
+      if (page === 1) setInitialLoading(true);
       setLoadingMore(true);
+
       try {
         const offset = (page - 1) * LIMIT;
         const url = new URL(`${API_URL}/api/colleges`);
         url.searchParams.append('limit', LIMIT.toString());
         url.searchParams.append('offset', offset.toString());
-        if (search) url.searchParams.append('search', search);
+        if (debouncedSearch) url.searchParams.append('search', debouncedSearch);
+        if (maxFees) url.searchParams.append('maxFees', maxFees.toString());
+        if (course) url.searchParams.append('course', course);
+        if (state) url.searchParams.append('state', state);
+        if (city) url.searchParams.append('city', city);
+        if (facility) url.searchParams.append('facility', facility);
+        if (sort) url.searchParams.append('sort', sort);
 
         const res = await fetch(url.toString());
-        const data = await res.json();
-        
-        if (data.length < LIMIT) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
-        
-        setColleges(prev => {
+        const data: College[] = await res.json();
+
+        if (ignore) return;
+
+        setHasMore(data.length >= LIMIT);
+
+        setColleges((prev) => {
           if (page === 1) return data;
-          const existingIds = new Set(prev.map(c => c.id));
-          const newColleges = data.filter((c: College) => !existingIds.has(c.id));
+          const existingIds = new Set(prev.map((c) => c.id));
+          const newColleges = data.filter((c) => !existingIds.has(c.id));
           return [...prev, ...newColleges];
         });
       } catch (err) {
-        console.error("Failed to load colleges", err);
+        if (!ignore) console.error('Failed to load colleges', err);
       } finally {
-        setLoadingMore(false);
+        if (!ignore) {
+          setLoadingMore(false);
+          setInitialLoading(false);
+        }
       }
     };
-    
-    loadData();
-  }, [page, search]);
 
+    loadData();
+    return () => {
+      ignore = true;
+    };
+  }, [page, debouncedSearch, maxFees, course, state, city, facility, sort]);
+
+  // Reset to page 1 whenever any filter changes
   useEffect(() => {
     setPage(1);
     setHasMore(true);
-  }, [search]);
+    setColleges([]); // clear stale data immediately so the user sees a fresh load
+  }, [debouncedSearch, maxFees, course, state, city, facility, sort]);
 
+  const activeFilterCount = [debouncedSearch, maxFees, course, state, city, facility, sort].filter(Boolean).length;
 
   return (
     <div className="space-y-8 animate-page-in">
@@ -117,22 +165,129 @@ useEffect(() => {
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-2">
-        <h2 className="flex items-center gap-3 text-2xl font-black text-slate-800">
-          Colleges
-          <span className="rounded-full border border-[#31572c]/10 bg-[#31572c]/10 px-3 py-1 text-sm font-semibold text-[#31572c]">
-            {colleges.length} Found
-          </span>
-        </h2>
-        <button onClick={() => setSearch('')} className="flex items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-[#31572c]">
-          <Filter className="h-4 w-4" /> Reset
-        </button>
+      <div className="flex flex-col gap-4 px-2">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-3 text-2xl font-black text-slate-800">
+            Colleges
+            <span className="rounded-full border border-[#31572c]/10 bg-[#31572c]/10 px-3 py-1 text-sm font-semibold text-[#31572c]">
+              {colleges.length} Loaded
+            </span>
+          </h2>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)} 
+              className={`flex items-center gap-2 text-sm font-bold transition-colors px-4 py-2 rounded-xl ${isFilterOpen ? 'bg-[#31572c] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            >
+              <Filter className="h-4 w-4" /> Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-1 rounded-full bg-[#f4a261] text-[#14213d] w-5 h-5 text-[10px] font-black flex items-center justify-center">{activeFilterCount}</span>
+              )}
+            </button>
+            <button 
+              onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setSort(''); }} 
+              className="text-sm font-bold text-slate-500 transition-colors hover:text-[#31572c]"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+
+        {isFilterOpen && (
+          <div className="surface p-6 rounded-2xl border border-slate-100 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Maximum Fees (Annual)</label>
+                <div className="flex flex-wrap gap-2">
+                  {[100000, 200000, 500000, 1000000].map(fee => (
+                    <button
+                      key={fee}
+                      onClick={() => setMaxFees(maxFees === fee ? '' : fee)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${maxFees === fee ? 'bg-[#31572c] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      &lt; {(fee/100000)}L
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Program / Course</label>
+                <div className="flex flex-wrap gap-2">
+                  {['B.Tech', 'MBA', 'MBBS', 'B.Sc', 'B.Com', 'LLB', 'BBA', 'M.Tech', 'BCA'].map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setCourse(course === c ? '' : c)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${course === c ? 'bg-[#31572c] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Facilities</label>
+                <div className="flex flex-wrap gap-2">
+                  {(availableFacilities.length > 0
+                    ? availableFacilities
+                    : ['Hostel', 'Library', 'Wi-Fi Campus', 'Sports Complex', 'A/C Classrooms', 'Cafeteria', 'Gym', 'Auditorium', 'Medical']
+                  ).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setFacility(facility === f ? '' : f)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${facility === f ? 'bg-[#31572c] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Location & Sort</label>
+                <div className="flex flex-col gap-2">
+                  <select 
+                    value={state} 
+                    onChange={(e) => setStateLoc(e.target.value)}
+                    className="w-full text-sm p-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#31572c]"
+                  >
+                    <option value="">All States</option>
+                    {availableStates.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  <select 
+                    value={sort} 
+                    onChange={(e) => setSort(e.target.value)}
+                    className="w-full text-sm p-2 rounded-lg border border-slate-200 focus:outline-none focus:border-[#31572c]"
+                  >
+                    <option value="">Sort by Rating (High to Low)</option>
+                    <option value="rating_asc">Sort by Rating (Low to High)</option>
+                    <option value="fees_asc">Sort by Fees (Low to High)</option>
+                    <option value="fees_desc">Sort by Fees (High to Low)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {loading ? (
+      {initialLoading ? (
         <div className="flex flex-col items-center justify-center gap-4 py-24">
           <Loader2 className="h-10 w-10 animate-spin text-[#31572c]" />
           <p className="animate-pulse font-medium text-slate-400">Loading colleges...</p>
+        </div>
+      ) : colleges.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
+          <div className="bg-slate-100 p-5 rounded-full">
+            <Search className="h-8 w-8 text-slate-400" />
+          </div>
+          <h3 className="text-xl font-bold text-slate-700">No colleges found</h3>
+          <p className="text-slate-500 max-w-sm">Try adjusting your filters or search query to discover more colleges.</p>
+          <button
+            onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setSort(''); }}
+            className="btn-primary px-6 py-3 mt-2"
+          >
+            Clear All Filters
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
@@ -142,7 +297,7 @@ useEffect(() => {
               ref={index === colleges.length - 1 ? lastElementRef : null}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, delay: Math.min(index * 0.04, 0.24) }}
+              transition={{ duration: 0.35, delay: Math.min((index % LIMIT) * 0.04, 0.24) }}
               className="surface lift-card group flex flex-col overflow-hidden rounded-3xl"
             >
               <div className="relative h-64 overflow-hidden">
@@ -220,13 +375,17 @@ useEffect(() => {
         </div>
       )}
 
-      {loadingMore && (
+      {loadingMore && !initialLoading && (
         <div className="flex justify-center py-10">
           <Loader2 className="h-8 w-8 animate-spin text-[#31572c]" />
         </div>
       )}
 
-      
+      {!hasMore && colleges.length > 0 && (
+        <div className="text-center py-8">
+          <p className="text-slate-400 text-sm font-medium">All {colleges.length} colleges loaded ✓</p>
+        </div>
+      )}
     </div>
   );
 };
