@@ -19,9 +19,9 @@ import {
   Filter
 } from 'lucide-react';
 import { useCollegeHome } from '../context/collegeHome';
-import { API_URL } from '../config';
 import { Skeleton } from '../components/Skeleton';
-import { apiFetch, getErrorMessage } from '../lib/api';
+import { getErrorMessage } from '../lib/api';
+import { getCollegeFilterMeta } from '../lib/collegeFilters';
 
 interface HomeProps {
   savedCount: number;
@@ -74,7 +74,7 @@ const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compare
 
   useEffect(() => {
     setIsLoadingMeta(true);
-    apiFetch<{ states?: string[]; courses?: string[] }>(`${API_URL}/api/colleges/meta/filters`)
+    getCollegeFilterMeta()
       .then(data => {
         if (data.states) setAvailableStates(data.states.slice(0, 8));
         if (data.courses) setAvailableCourses(data.courses.slice(0, 12));

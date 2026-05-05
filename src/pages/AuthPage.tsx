@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
 import { GraduationCap, Loader2, Mail, Lock, User } from 'lucide-react';
@@ -14,10 +14,12 @@ const AuthPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from || '/profile';
 
   // If already logged in, redirect to profile
   if (user) {
-    navigate('/profile', { replace: true });
+    navigate(redirectTo, { replace: true });
     return null;
   }
 
@@ -33,7 +35,7 @@ const AuthPage: React.FC = () => {
       const data = await postJson<{ token: string; user: Parameters<typeof login>[1] }>(`${API_URL}${endpoint}`, payload);
 
       login(data.token, data.user);
-      navigate('/profile', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(getErrorMessage(err, 'Network error. Please try again.'));
     } finally {

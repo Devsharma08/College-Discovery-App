@@ -1,7 +1,20 @@
 import React, { Suspense, lazy, useMemo, useState, useEffect } from 'react';
 import EarthLoader from './components/EarthLoader';
-import { BrowserRouter as Router, NavLink, Routes, Route, Link } from 'react-router-dom';
-import { BrainCircuit, GraduationCap, Scale, X, ArrowDown, ArrowUp, ArrowRight, User as UserIcon, LogOut, ChevronDown, BookOpen } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, NavLink, Link, useLocation, Navigate } from 'react-router-dom';
+import { 
+  Scale, 
+  BrainCircuit, 
+  GraduationCap, 
+  User as UserIcon, 
+  LogOut, 
+  ChevronDown, 
+  BookOpen, 
+  X, 
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  Loader2
+} from 'lucide-react';
 import { Toaster, toast } from 'react-hot-toast';
 import type { College } from './types';
 import { HomeContextProvider } from './context/collegeHome';
@@ -45,7 +58,7 @@ const AppContent: React.FC = () => {
   const [isMinimized, setIsMinimized] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, isLoading } = useAuth();
   const savedIds = useMemo(() => new Set(savedColleges.map((college) => college.id)), [savedColleges]);
   const compareIds = useMemo(() => new Set(compareList.map((college) => college.id)), [compareList]);
 
@@ -121,6 +134,21 @@ const AppContent: React.FC = () => {
       ));
       toast.error(getErrorMessage(err, 'Could not update shortlist. Please try again.'), { id: `shortlist-error-${college.id}` });
     }
+  };
+
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    const location = useLocation();
+    if (isLoading) {
+      return (
+        <div className="flex min-h-[70vh] items-center justify-center">
+          <Loader2 className="w-10 h-10 text-[#31572c] animate-spin" />
+        </div>
+      );
+    }
+    if (!user) {
+      return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
+    }
+    return <>{children}</>;
   };
 
   return (
@@ -301,9 +329,30 @@ const AppContent: React.FC = () => {
             <Route path="/discover" element={<CollegeList addToCompare={addToCompare} toggleSave={toggleSave} savedIds={savedIds} compareIds={compareIds} />} />
             <Route path="/college/:id" element={<CollegeDetail addToCompare={addToCompare} toggleSave={toggleSave} savedIds={savedIds} />} />
             <Route path="/saved" element={<SavedList savedColleges={savedColleges} toggleSave={toggleSave} addToCompare={addToCompare} compareIds={compareIds} />} />
-            <Route path="/predictor" element={<Predictor />} />
-            <Route path="/compare" element={<Compare compareList={compareList} removeFromCompare={removeFromCompare} />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route 
+              path="/predictor" 
+              element={
+                <ProtectedRoute>
+                  <Predictor />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/compare" 
+              element={
+                <ProtectedRoute>
+                  <Compare compareList={compareList} removeFromCompare={removeFromCompare} />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/auth" element={<AuthPage />} />
           </Routes>
         </Suspense>

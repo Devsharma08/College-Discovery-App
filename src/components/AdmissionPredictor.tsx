@@ -4,6 +4,7 @@ import { API_URL } from '../config';
 import { usePredictor, type PredictedCollege } from '../context/PredictorContext';
 import type { College } from '../types';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 
 interface AdmissionPredictorProps {
   collegeId?: string;
@@ -18,6 +19,7 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
   onResultsFound
 }) => {
   const { rank, setRank, exam, setExam, category, setCategory } = usePredictor();
+  const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     chance: 'High' | 'Medium' | 'Low' | 'None';
@@ -83,7 +85,9 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
         url.searchParams.append('rank', rank);
         url.searchParams.append('exam', exam);
         url.searchParams.append('category', category);
-        const data = await apiFetch<PredictedCollege[]>(url.toString());
+        const data = await apiFetch<PredictedCollege[]>(url.toString(), {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
         if (onResultsFound) onResultsFound(data);
       }
     } catch (err) {

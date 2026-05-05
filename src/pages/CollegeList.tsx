@@ -5,6 +5,7 @@ import type { College } from '../types';
 import { API_URL } from '../config';
 import CollegeCard from '../components/CollegeCard';
 import { apiFetch, getErrorMessage } from '../lib/api';
+import { getCollegeFilterMeta } from '../lib/collegeFilters';
 
 interface CollegeListProps {
   addToCompare: (college: College) => void;
@@ -64,7 +65,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
 
   // Fetch filter meta once
   useEffect(() => {
-    apiFetch<{ states?: string[]; cities?: string[]; courses?: string[] }>(`${API_URL}/api/colleges/meta/filters`)
+    getCollegeFilterMeta()
       .then((data) => {
         if (data.states) setAvailableStates(data.states);
         if (data.cities) setAvailableCities(data.cities);

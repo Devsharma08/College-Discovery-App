@@ -10,8 +10,8 @@ import { protect } from '../middleware/auth.middleware';
 
 const router = Router();
 
-router.get('/', getColleges);
 router.get('/meta/filters', getFilters);
+router.get('/', getColleges);
 router.get('/:id/stream', streamCollegeDetail);
 router.get('/:id', getCollegeById);
 router.get('/:id/light', getCollegeLight);
