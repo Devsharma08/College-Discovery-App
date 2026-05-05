@@ -25,3 +25,14 @@ dist-ssr
 
 .env
 .env.production
+.env.development
+
+# Large media files
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.zip
+*.tar.gz
+Recording*
