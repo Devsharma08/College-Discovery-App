@@ -26,7 +26,8 @@ const PORT = process.env.PORT || 5000;
 app.use(compression({
   filter: (req: Request, res: Response): boolean => {
     if (req.headers['x-no-compression']) return false;
-    if (res.getHeader('Content-Type') === 'text/event-stream') return false;
+    const contentType = String(res.getHeader('Content-Type') || '');
+    if (contentType.includes('text/event-stream') || contentType.includes('application/x-ndjson')) return false;
     return compression.filter(req, res);
   },
   memLevel: 8,
@@ -39,6 +40,10 @@ app.use((req, res, next) => {
   const requestId = req.headers['x-request-id']?.toString() || crypto.randomUUID();
   res.locals.requestId = requestId;
   res.setHeader('X-Request-Id', requestId);
+  
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  }
   next();
 });
 

@@ -11,6 +11,7 @@ export const beginNdjsonStream = (res: Response) => {
   res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx/Render
   res.flushHeaders?.();
 };
 
