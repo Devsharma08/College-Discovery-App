@@ -134,7 +134,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
 
     loadData();
     return () => controller.abort();
-  }, [page, debouncedSearch, maxFees, course, state, city, facility, sort]);
+  }, [page, debouncedSearch, maxFees, course, state, city, facility, type, sort]);
 
   useEffect(() => {
     setPage(1);

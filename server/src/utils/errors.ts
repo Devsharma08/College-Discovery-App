@@ -15,10 +15,12 @@ export class ApiError extends Error {
 }
 
 export const asyncHandler =
-  <TReq extends Request = Request>(handler: (req: TReq, res: Response, next: NextFunction) => Promise<unknown>) =>
-    (req: TReq, res: Response, next: NextFunction) => {
-      Promise.resolve(handler(req, res, next)).catch(next);
-    };
+  <TReq extends Request = Request>(
+    handler: (req: TReq, res: Response, next: NextFunction) => Promise<unknown>
+  ) =>
+  (req: TReq, res: Response, next: NextFunction) => {
+    Promise.resolve(handler(req, res, next)).catch(next);
+  };
 
 export const notFoundHandler = (req: Request, _res: Response, next: NextFunction) => {
   next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`, 'NOT_FOUND'));

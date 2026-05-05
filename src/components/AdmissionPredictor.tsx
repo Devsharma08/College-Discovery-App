@@ -118,8 +118,8 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
   }, [result]);
 
   return (
-    <div className={`surface overflow-hidden rounded-[2rem] border border-slate-100 shadow-sm ${className}`}>
-      <div className="bg-gradient-to-r from-[#203d1f] to-[#31572c] p-6 text-white">
+    <div className={`surface overflow-visible rounded-[2rem] border border-slate-100 shadow-sm w-full ${className}`}>
+      <div className="bg-gradient-to-r from-[#203d1f] to-[#31572c] p-6 text-white rounded-t-[2rem] overflow-hidden">
         <div className="flex items-center gap-3">
           <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
             <BrainCircuit className="w-5 h-5" />
@@ -133,7 +133,7 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
 
       <div className="p-8 space-y-6">
         <form onSubmit={handlePredict} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider pl-1">Entrance Exam</label>
               <select 
@@ -197,7 +197,7 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
         )}
 
         {result && (
-          <div className={`p-6 rounded-2xl border-2 animate-float-in ${chanceBg}`}>
+          <div className={`p-6 rounded-2xl border-2 animate-slide-up ${chanceBg}`}>
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Your Chances</p>
@@ -232,8 +232,8 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
               </div>
 
               <div className="bg-white/40 p-3 rounded-xl border border-white/40">
-                <p className="text-[10px] text-slate-600 font-medium">
-                  <span className="font-bold text-[#31572c]">Counselor Advice:</span> {result.advice}
+                <p className="text-[11px] text-slate-700 leading-relaxed">
+                  <span className="font-bold text-[#31572c] block mb-1">Counselor Advice:</span> {result.advice}
                 </p>
               </div>
 

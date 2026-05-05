@@ -56,9 +56,7 @@ export const getColleges = asyncHandler(async (req: Request, res: Response): Pro
         fees: true,
         imgUrl: true,
         popularFor: true,
-        type: true,
-        city: true,
-        state: true
+        type: true
       }
     });
 
@@ -76,7 +74,7 @@ export const getFilters = asyncHandler(async (_req: Request, res: Response): Pro
     }
 
     const [collegeRows, facilitiesObj, courseRows] = await Promise.all([
-      prisma.college.findMany({ select: { state: true, city: true } }),
+      prisma.college.findMany({ select: { state: true, city: true, type: true } }),
       prisma.facility.findMany({ select: { name: true } }),
       prisma.course.findMany({ select: { name: true }, distinct: ['name'] }),
     ]);

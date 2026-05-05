@@ -113,6 +113,21 @@ img {
   animation: floatIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .surface {
   border: 1px solid rgba(203, 213, 225, 0.72);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86));

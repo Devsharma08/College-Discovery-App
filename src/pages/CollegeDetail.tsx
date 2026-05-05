@@ -326,7 +326,8 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      {college && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         {/* Left Column: Info */}
         <div className="lg:col-span-2 space-y-12">
           {/* Overview */}
@@ -415,46 +416,70 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
         {/* Right Column: Fees & Call to Action */}
         <div className="space-y-8">
           <div className="surface p-8 rounded-3xl space-y-6 sticky top-24">
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Yearly Academic Fees</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">Rs. {college.fees.toLocaleString()}</span>
-                <span className="text-slate-400 font-medium">/ year</span>
-              </div>
-            </div>
-
-            <div className="space-y-4 pt-4">
-              <h4 className="font-bold text-slate-800">Entrance Cutoffs</h4>
-              {college.cutoffs && college.cutoffs.length > 0 ? (
-                <div className="space-y-3">
-                  {college.cutoffs.map((c: any) => (
-                    <div key={c.id} className="flex justify-between items-center p-3 bg-[#f6f4ee] rounded-xl border border-slate-100">
-                      <div>
-                        <p className="text-xs font-bold text-[#31572c]">{c.examName}</p>
-                        <p className="text-xs text-slate-400">{c.category || 'General'}</p>
-                      </div>
-                      <span className="font-bold text-slate-700">Rank {c.maxRank}</span>
-                    </div>
-                  ))}
+            {loading && !college ? (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-10 w-48" />
                 </div>
-              ) : (
-                <p className="text-sm text-slate-400 italic">No cutoff data available yet.</p>
-              )}
-            </div>
+                <div className="space-y-4 pt-4">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                </div>
+                <div className="space-y-3 pt-4">
+                  <Skeleton className="h-14 w-full rounded-2xl" />
+                  <Skeleton className="h-14 w-full rounded-2xl" />
+                </div>
+              </div>
+            ) : college ? (
+              <>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Yearly Academic Fees</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-slate-900">Rs. {college.fees.toLocaleString()}</span>
+                    <span className="text-slate-400 font-medium">/ year</span>
+                  </div>
+                </div>
 
-            <button className="btn-primary w-full py-4">
-              Download Brochure
-            </button>
-            <button className="btn-secondary w-full py-4">
-              Apply Now
-            </button>
+                <div className="space-y-4 pt-4">
+                  <h4 className="font-bold text-slate-800">Entrance Cutoffs</h4>
+                  {college.cutoffs && college.cutoffs.length > 0 ? (
+                    <div className="space-y-3">
+                      {college.cutoffs.map((c: any) => (
+                        <div key={c.id} className="flex justify-between items-center p-3 bg-[#f6f4ee] rounded-xl border border-slate-100">
+                          <div>
+                            <p className="text-xs font-bold text-[#31572c]">{c.examName}</p>
+                            <p className="text-xs text-slate-400">{c.category || 'General'}</p>
+                          </div>
+                          <span className="font-bold text-slate-700">Rank {c.maxRank}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">No cutoff data available yet.</p>
+                  )}
+                </div>
+
+                <button className="btn-primary w-full py-4 shadow-lg shadow-emerald-900/10">
+                  Download Brochure
+                </button>
+                <button className="btn-secondary w-full py-4">
+                  Apply Now
+                </button>
+              </>
+            ) : null}
           </div>
-
-          <Suspense fallback={<Skeleton className="h-96 w-full rounded-[2rem]" />}>
-            <AdmissionPredictor collegeId={id} initialExam="Entrance" />
-          </Suspense>
         </div>
       </div>
+      )}
+      {/* Smart Predictor Section - Centered Full Width */}
+      <section className="mt-12 max-w-4xl mx-auto w-full px-4">
+        <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-[2rem]" />}>
+          <AdmissionPredictor collegeId={id} initialExam="Entrance" />
+        </Suspense>
+      </section>
+
       {/* Community Q&A Section */}
       <section className="surface p-8 rounded-3xl space-y-8 mt-12">
         <div className="flex items-center justify-between">
