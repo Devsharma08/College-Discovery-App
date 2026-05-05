@@ -3,6 +3,7 @@ import { BrainCircuit, Loader2, Sparkles, AlertCircle, CheckCircle2, TrendingUp 
 import { API_URL } from '../config';
 import { usePredictor, type PredictedCollege } from '../context/PredictorContext';
 import type { College } from '../types';
+import { apiFetch, getErrorMessage } from '../lib/api';
 
 interface AdmissionPredictorProps {
   collegeId?: string;
@@ -58,8 +59,7 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
 
     try {
       if (collegeId) {
-        const colRes = await fetch(`${API_URL}/api/colleges/${collegeId}`);
-        const college: College = await colRes.json();
+        const college = await apiFetch<College>(`${API_URL}/api/colleges/${collegeId}`);
         const cutoff =
           college.cutoffs?.find((item) => item.examName.toLowerCase() === exam.toLowerCase()) ||
           college.cutoffs?.find((item) => item.examName.toLowerCase().includes(exam.toLowerCase()) || exam.toLowerCase().includes(item.examName.toLowerCase())) ||
@@ -83,12 +83,11 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
         url.searchParams.append('rank', rank);
         url.searchParams.append('exam', exam);
         url.searchParams.append('category', category);
-        const response = await fetch(url.toString());
-        const data = await response.json();
+        const data = await apiFetch<PredictedCollege[]>(url.toString());
         if (onResultsFound) onResultsFound(data);
       }
     } catch (err) {
-      setError('Failed to fetch prediction data. Please make sure the backend server is running.');
+      setError(getErrorMessage(err, 'Failed to fetch prediction data. Please make sure the backend server is running.'));
     } finally {
       setLoading(false);
     }
@@ -122,8 +121,8 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
             <BrainCircuit className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-bold">Admission Predictor</h3>
-            <p className="text-white/70 text-xs font-medium">AI-powered probability engine</p>
+            <h3 className="font-bold">Smart Admission Predictor</h3>
+            <p className="text-white/70 text-xs font-medium">Data-driven probability engine</p>
           </div>
         </div>
       </div>
@@ -159,28 +158,30 @@ const AdmissionPredictor: React.FC<AdmissionPredictorProps> = ({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider pl-1">Your All India Rank</label>
-            <div className="relative">
-              <input 
-                type="number" 
-                placeholder="e.g. 15000"
-                value={rank}
-                onChange={(e) => setRank(e.target.value)}
-                required
-                className="w-full bg-[#f6f4ee] border-none rounded-xl py-3 px-4 text-sm font-bold focus:ring-2 focus:ring-[#31572c] transition-all outline-none pl-10"
-              />
-              <TrendingUp className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            </div>
+          <div className="brutalist-container pt-6">
+            <input 
+              type="number" 
+              placeholder="E.G. 15000"
+              value={rank}
+              onChange={(e) => setRank(e.target.value)}
+              required
+              className="brutalist-input smooth-type !pl-4"
+            />
+            <label className="brutalist-label">All India Rank</label>
           </div>
 
           <button 
             type="submit"
             disabled={loading || !rank}
-            className="btn-primary w-full py-3.5 text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#31572c]/10"
+            className="btn-val w-full group"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-            Calculate Probability
+            <span className="btn-val_lg bg-[#1a1a1a]">
+              <span className="btn-val_sl bg-[#31572c]"></span>
+              <span className="btn-val_text flex items-center justify-center gap-2">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                Calculate Probability
+              </span>
+            </span>
           </button>
         </form>
 

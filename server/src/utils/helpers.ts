@@ -6,6 +6,12 @@ export const toPositiveInt = (value: unknown, fallback: number, max = 100) => {
   return Math.min(Math.floor(parsed), max);
 };
 
+export const paramToString = (value: string | string[] | undefined, name = 'id') => {
+  const result = Array.isArray(value) ? value[0] : value;
+  if (!result) throw new Error(`Missing route param: ${name}`);
+  return result;
+};
+
 export const normalizeText = (value: unknown) => String(value ?? '').trim().toLowerCase();
 
 export const isExamMatch = (cutoffExam: string, selectedExam: string) => {

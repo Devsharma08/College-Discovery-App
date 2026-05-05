@@ -4,6 +4,7 @@ import { Scale, X, MapPin, Star, IndianRupee, GraduationCap, CheckCircle2, Loade
 import type { College } from '../types';
 import { Link } from 'react-router-dom';
 import { getCollegeImage } from '../lib/collegeImages';
+import { getErrorMessage, postJson, readSseTextStream } from '../lib/api';
 
 interface CompareProps {
   compareList: College[];
@@ -33,19 +34,11 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
         body: JSON.stringify({ colleges: detailedColleges })
       });
 
-      if (!response.body) throw new Error('No stream body');
-      
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        setAiSummary((prev) => prev + decoder.decode(value));
-      }
+      await readSseTextStream(response, (text) => {
+        setAiSummary((prev) => prev + text);
+      });
     } catch (err) {
-      console.error(err);
-      setAiSummary('Failed to fetch AI summary.');
+      setAiSummary(getErrorMessage(err, 'Failed to fetch AI summary.'));
     } finally {
       setStreaming(false);
     }
@@ -66,15 +59,11 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
     const fetchDetailedData = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}/api/compare`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ collegeIds: compareIds })
-        });
-        const data = await response.json();
+        const data = await postJson<College[]>(`${API_URL}/api/compare`, { collegeIds: compareIds });
         setDetailedColleges(data);
       } catch (error) {
-        // Silent catch
+        setDetailedColleges([]);
+        console.error(getErrorMessage(error, 'Comparison failed'));
       } finally {
         setLoading(false);
       }
@@ -148,13 +137,16 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
               <option value="JEE">JEE Mains</option>
               <option value="NEET">NEET</option>
             </select>
-            <input 
-              type="number"
-              placeholder="Enter your rank..."
-              value={userRank}
-              onChange={(e) => setUserRank(e.target.value)}
-              className="w-full bg-[#f6f4ee] border-none rounded-2xl py-4 px-4 font-bold outline-none focus:ring-2 focus:ring-[#31572c] transition-all"
-            />
+            <div className="brutalist-container">
+              <input 
+                type="number"
+                placeholder="RANK..."
+                value={userRank}
+                onChange={(e) => setUserRank(e.target.value)}
+                className="brutalist-input smooth-type !pl-4"
+              />
+              <label className="brutalist-label">Your Rank</label>
+            </div>
           </div>
         </div>
         <button 
@@ -165,30 +157,6 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
           {predicting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
           Predict with AI
         </button>
-      </div>
-
-      <div className="surface p-8 rounded-[2rem] max-w-4xl mx-auto flex flex-wrap items-end gap-6 shadow-sm border border-slate-100">
-        <div className="flex-1 min-w-[200px] space-y-2">
-          <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest pl-1">Check Your Admission Chances</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select 
-              value={userExam}
-              onChange={(e) => setUserExam(e.target.value)}
-              className="w-full bg-[#f6f4ee] border-none rounded-2xl py-4 px-4 font-bold outline-none focus:ring-2 focus:ring-[#31572c] transition-all"
-            >
-              <option value="Entrance">General Entrance</option>
-              <option value="JEE">JEE Mains</option>
-              <option value="NEET">NEET</option>
-            </select>
-            <input 
-              type="number"
-              placeholder="Enter your rank..."
-              value={userRank}
-              onChange={(e) => setUserRank(e.target.value)}
-              className="w-full bg-[#f6f4ee] border-none rounded-2xl py-4 px-4 font-bold outline-none focus:ring-2 focus:ring-[#31572c] transition-all"
-            />
-          </div>
-        </div>
       </div>
 
       {loading && (

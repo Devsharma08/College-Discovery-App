@@ -111,7 +111,10 @@ model College {
   @@index([state])
   @@index([city])
   @@index([rating])
+  @@index([fees])
   @@index([name])
+  @@index([state, rating])
+  @@index([state, fees])
 }
 
 model CollegeDetails {
@@ -155,6 +158,7 @@ model Review {
   college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, collegeId])
   @@index([collegeId])
   @@index([userId])
 }
@@ -171,6 +175,7 @@ model Course {
   college         College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([collegeId])
+  @@index([name])
 }
 
 model PlacementStat {

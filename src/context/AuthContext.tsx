@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_URL } from '../config';
+import { apiFetch } from '../lib/api';
 
 interface UserProfile {
   fullName?: string;
@@ -45,17 +46,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const res = await fetch(`${API_URL}/api/auth/profile`, {
+        const data = await apiFetch<User>(`${API_URL}/api/auth/profile`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-        } else {
-          logout();
-        }
+        setUser(data);
       } catch (err) {
         console.error('Auth check failed:', err);
+        logout();
       } finally {
         setIsLoading(false);
       }

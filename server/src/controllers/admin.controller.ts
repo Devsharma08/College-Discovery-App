@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { paramToString } from '../utils/helpers';
 
 export const createCollege = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -47,7 +48,7 @@ export const deleteCollege = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const { id } = req.params;
+    const id = paramToString(req.params.id);
     await prisma.college.delete({ where: { id } });
 
     res.json({ message: 'College deleted successfully' });

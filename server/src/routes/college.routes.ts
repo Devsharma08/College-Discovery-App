@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { 
-  getColleges, getCollegeById, getFilters,
+  getColleges, getCollegeById, getFilters, getCollegeLight,
   getCollegeCourses, getCollegePlacements, 
   getCollegeFacilities, getCollegeEvents, 
-  getCollegeReviews, postCollegeReview 
+  getCollegeReviews, postCollegeReview, streamCollegeDetail
 } from '../controllers/college.controller';
 import { getQuestions, postQuestion } from '../controllers/qa.controller';
 import { protect } from '../middleware/auth.middleware';
@@ -12,7 +12,9 @@ const router = Router();
 
 router.get('/', getColleges);
 router.get('/meta/filters', getFilters);
+router.get('/:id/stream', streamCollegeDetail);
 router.get('/:id', getCollegeById);
+router.get('/:id/light', getCollegeLight);
 
 // Detailed Sub-resources
 router.get('/:id/courses', getCollegeCourses);

@@ -2,24 +2,23 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { getCached, setCached } from '../utils/cache';
 import { toPositiveInt, getBestCutoffForRank, getPredictionPercent, getMatchReason } from '../utils/helpers';
+import { ApiError, asyncHandler } from '../utils/errors';
 
-export const predictColleges = async (req: Request, res: Response): Promise<void> => {
-  try {
+export const predictColleges = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { rank, exam, category = 'General' } = req.query;
     if (!rank || !exam) {
-      res.status(400).json({ error: 'Rank and exam are required' });
-      return;
+      throw new ApiError(400, 'Rank and exam are required', 'MISSING_PREDICTOR_INPUT');
     }
     
     const parsedRank = toPositiveInt(rank, 0, 1_000_000);
     if (parsedRank <= 0) {
-      res.status(400).json({ error: 'Rank must be a positive number' });
-      return;
+      throw new ApiError(400, 'Rank must be a positive number', 'INVALID_RANK');
     }
 
     const cacheKey = `predictor:v2:${exam}:${parsedRank}:${category}`;
     const cached = getCached(cacheKey);
     if (cached) {
+      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
       res.json(cached);
       return;
     }
@@ -60,9 +59,6 @@ export const predictColleges = async (req: Request, res: Response): Promise<void
       .map(({ _score, ...college }) => college);
 
     setCached(cacheKey, results);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     res.json(results);
-  } catch (error) {
-    console.error('Predictor Error:', error);
-    res.status(500).json({ error: 'Prediction failed' });
-  }
-};
+});

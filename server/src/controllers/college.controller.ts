@@ -1,17 +1,27 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { getCached, setCached } from '../utils/cache';
-import { toPositiveInt } from '../utils/helpers';
+import { deleteCachedByPrefix, getCached, setCached } from '../utils/cache';
+import { paramToString, toPositiveInt } from '../utils/helpers';
+import { ApiError, asyncHandler } from '../utils/errors';
+import { beginNdjsonStream, streamSection, writeNdjson } from '../utils/stream';
 
-export const getColleges = async (req: Request, res: Response): Promise<void> => {
-  try {
+const setPublicCache = (res: Response, seconds = 60) => {
+  res.set('Cache-Control', `public, max-age=${seconds}, stale-while-revalidate=${seconds * 2}`);
+};
+
+const setPrivateNoStore = (res: Response) => {
+  res.set('Cache-Control', 'private, no-store');
+};
+
+export const getColleges = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { search, state, city, maxFees, course, facility, sort } = req.query;
-    const take = toPositiveInt(req.query.limit, 60);
+    const take = toPositiveInt(req.query.limit, 30, 60);
     const skip = toPositiveInt(req.query.offset, 0, 10_000);
     const cacheKey = `colleges:light:${search ?? ''}:${state ?? ''}:${city ?? ''}:${maxFees ?? ''}:${course ?? ''}:${facility ?? ''}:${sort ?? ''}:${take}:${skip}`;
     const cached = getCached(cacheKey);
     
     if (cached) {
+      setPublicCache(res);
       res.json(cached);
       return;
     }
@@ -50,47 +60,82 @@ export const getColleges = async (req: Request, res: Response): Promise<void> =>
     });
 
     setCached(cacheKey, colleges);
+    setPublicCache(res);
     res.json(colleges);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch colleges' });
-  }
-};
+});
 
-export const getFilters = async (req: Request, res: Response): Promise<void> => {
-  try {
+export const getFilters = asyncHandler(async (_req: Request, res: Response): Promise<void> => {
     const cached = getCached('college:meta:filters');
     if (cached) {
+      setPublicCache(res, 300);
       res.json(cached);
       return;
     }
 
-    const colleges = await prisma.college.findMany({
-      select: { state: true }
-    });
+    const [collegeRows, facilitiesObj, courseRows] = await Promise.all([
+      prisma.college.findMany({ select: { state: true, city: true } }),
+      prisma.facility.findMany({ select: { name: true } }),
+      prisma.course.findMany({ select: { name: true }, distinct: ['name'] }),
+    ]);
 
-    const states = [...new Set(colleges.map(c => c.state).filter(Boolean))].sort();
-
-    const facilitiesObj = await prisma.facility.findMany({
-      select: { name: true }
-    });
-    
+    const states = [...new Set(collegeRows.map(c => c.state).filter(Boolean))].sort() as string[];
+    const cities = [...new Set(collegeRows.map(c => c.city).filter(Boolean))].sort() as string[];
     const facilities = [...new Set(facilitiesObj.map(f => f.name).filter(Boolean))].sort();
+    const courses = [...new Set(courseRows.map(c => c.name).filter(Boolean))].sort();
 
-    const data = { states, facilities };
+    const data = { states, cities, facilities, courses };
     setCached('college:meta:filters', data);
+    setPublicCache(res, 300);
     res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch filters' });
-  }
-};
+});
 
-export const getCollegeById = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const getCollegeById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
     const cacheKey = `college:details:${id}`;
     const cached = getCached(cacheKey);
     
     if (cached) {
+      setPublicCache(res);
+      res.json(cached);
+      return;
+    }
+
+    const college = await prisma.college.findUnique({
+      where: { id },
+      include: {
+        details: true,
+        cutoffs: { orderBy: { maxRank: 'asc' } },
+        courses: { orderBy: { name: 'asc' } },
+        placementStats: { orderBy: { year: 'desc' } },
+        facilities: { include: { facility: true } },
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: { user: { select: { username: true, avatarUrl: true } } }
+        },
+        events: {
+          where: { date: { gte: new Date() } },
+          orderBy: { date: 'asc' },
+          take: 5
+        },
+      }
+    });
+
+    if (!college) {
+      throw new ApiError(404, 'College not found', 'COLLEGE_NOT_FOUND');
+    }
+    
+    setCached(cacheKey, college);
+    setPublicCache(res);
+    res.json(college);
+});
+
+export const getCollegeLight = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
+    const cacheKey = `college:light:${id}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      setPublicCache(res);
       res.json(cached);
       return;
     }
@@ -105,94 +150,89 @@ export const getCollegeById = async (req: Request, res: Response): Promise<void>
         fees: true,
         imgUrl: true,
         popularFor: true,
-        details: {
-          select: {
-            description: true,
-            imageUrl: true,
-            programs: true
-          }
-        },
-        cutoffs: {
-          select: {
-            examName: true,
-            maxRank: true,
-            category: true
-          }
-        }
+        city: true,
+        state: true
       }
     });
-
     if (!college) {
-      res.status(404).json({ error: 'College not found' });
-      return;
+      throw new ApiError(404, 'College not found', 'COLLEGE_NOT_FOUND');
     }
-    
     setCached(cacheKey, college);
+    setPublicCache(res);
     res.json(college);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch college details' });
-  }
-};
+});
 
 // --- NEW EXTENDED APIs FOR LIGHT PACKETS ---
 
-export const getCollegeCourses = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const getCollegeCourses = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
+    const cacheKey = `college:courses:${id}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      setPublicCache(res);
+      res.json(cached);
+      return;
+    }
     const courses = await prisma.course.findMany({
       where: { collegeId: id },
       select: { id: true, name: true, level: true, durationInYears: true, tuitionFee: true, seatsAvailable: true }
     });
+    setCached(cacheKey, courses);
+    setPublicCache(res);
     res.json(courses);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch courses' });
-  }
-};
+});
 
-export const getCollegePlacements = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const getCollegePlacements = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
+    const cacheKey = `college:placements:${id}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      setPublicCache(res);
+      res.json(cached);
+      return;
+    }
     const placements = await prisma.placementStat.findMany({
       where: { collegeId: id },
       orderBy: { year: 'desc' },
       select: { id: true, year: true, highestPackage: true, averagePackage: true, placementPercentage: true, topRecruiters: true }
     });
+    setCached(cacheKey, placements);
+    setPublicCache(res);
     res.json(placements);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch placements' });
-  }
-};
+});
 
-export const getCollegeFacilities = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
-    const facilities = await prisma.collegeFacility.findMany({
+export const getCollegeFacilities = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
+    const cacheKey = `college:facilities:${id}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      setPublicCache(res);
+      res.json(cached);
+      return;
+    }
+    const facilities = await (prisma.collegeFacility.findMany as any)({
       where: { collegeId: id },
       include: { facility: { select: { name: true, iconUrl: true } } }
     });
-    res.json(facilities.map(f => f.facility));
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch facilities' });
-  }
-};
+    const payload = facilities.map((f: any) => f.facility);
+    setCached(cacheKey, payload);
+    setPublicCache(res);
+    res.json(payload);
+});
 
-export const getCollegeEvents = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const getCollegeEvents = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
     const events = await prisma.event.findMany({
       where: { collegeId: id, date: { gte: new Date() } }, // only upcoming events
       orderBy: { date: 'asc' },
       select: { id: true, title: true, description: true, date: true, type: true }
     });
+    setPublicCache(res);
     res.json(events);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-};
+});
 
-export const getCollegeReviews = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const getCollegeReviews = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
     const reviews = await prisma.review.findMany({
       where: { collegeId: id },
       orderBy: { createdAt: 'desc' },
@@ -201,33 +241,41 @@ export const getCollegeReviews = async (req: Request, res: Response): Promise<vo
         user: { select: { username: true, avatarUrl: true } }
       }
     });
+    setPublicCache(res, 30);
     res.json(reviews);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch reviews' });
-  }
-};
+});
 
-export const postCollegeReview = async (req: Request | any, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params;
+export const postCollegeReview = asyncHandler(async (req: Request | any, res: Response): Promise<void> => {
+    const id = paramToString(req.params.id);
     const { rating, comment } = req.body;
-    const userId = req.user?.userId; // Assumes auth middleware
+    const userId = req.user?.userId;
 
     if (!userId) {
-      res.status(401).json({ error: 'You must be logged in to leave a review' });
-      return;
+      throw new ApiError(401, 'You must be logged in to leave a review', 'UNAUTHORIZED');
     }
 
     if (!rating || rating < 1 || rating > 5) {
-      res.status(400).json({ error: 'Rating must be between 1 and 5' });
-      return;
+      throw new ApiError(400, 'Rating must be between 1 and 5', 'INVALID_RATING');
+    }
+
+    if (comment && comment.length > 500) {
+      throw new ApiError(400, 'Comment is too long (max 500 characters)', 'COMMENT_TOO_LONG');
+    }
+
+    // Check if user already reviewed this college
+    const existingReview = await prisma.review.findUnique({
+      where: { userId_collegeId: { userId, collegeId: id } }
+    });
+
+    if (existingReview) {
+      throw new ApiError(409, 'You have already reviewed this college', 'REVIEW_EXISTS');
     }
 
     const review = await prisma.review.create({
       data: {
         collegeId: id,
         userId,
-        rating,
+        rating: Number(rating),
         comment
       },
       include: {
@@ -235,8 +283,92 @@ export const postCollegeReview = async (req: Request | any, res: Response): Prom
       }
     });
 
+    // Recalculate average rating for the college
+    const allReviews = await prisma.review.findMany({
+      where: { collegeId: id },
+      select: { rating: true }
+    });
+
+    const averageRating = allReviews.reduce((acc, r) => acc + r.rating, 0) / allReviews.length;
+
+    await prisma.college.update({
+      where: { id },
+      data: { rating: parseFloat(averageRating.toFixed(1)) }
+    });
+
+    deleteCachedByPrefix(`college:details:${id}`);
+    deleteCachedByPrefix(`college:light:${id}`);
+    setPrivateNoStore(res);
     res.status(201).json(review);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to post review' });
+});
+
+export const streamCollegeDetail = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const id = paramToString(req.params.id);
+  beginNdjsonStream(res);
+
+  const core = await prisma.college.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      location: true,
+      rating: true,
+      fees: true,
+      imgUrl: true,
+      popularFor: true,
+      city: true,
+      state: true,
+      details: { select: { description: true, programs: true } },
+      cutoffs: { orderBy: { maxRank: 'asc' } },
+    },
+  });
+
+  if (!core) {
+    writeNdjson(res, { type: 'error', error: { message: 'College not found' } });
+    res.end();
+    return;
   }
-};
+
+  writeNdjson(res, { type: 'college', data: core });
+
+  await Promise.all([
+    streamSection(res, 'courses', () => prisma.course.findMany({
+      where: { collegeId: id },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, level: true, durationInYears: true, tuitionFee: true, seatsAvailable: true },
+    })),
+    streamSection(res, 'placements', () => prisma.placementStat.findMany({
+      where: { collegeId: id },
+      orderBy: { year: 'desc' },
+      select: { id: true, year: true, highestPackage: true, averagePackage: true, placementPercentage: true, topRecruiters: true },
+    })),
+    streamSection(res, 'facilities', async () => {
+      const facilities = await (prisma.collegeFacility.findMany as any)({
+        where: { collegeId: id },
+        include: { facility: { select: { name: true, iconUrl: true } } },
+      });
+      return facilities.map((f: any) => f.facility);
+    }),
+    streamSection(res, 'reviews', () => prisma.review.findMany({
+      where: { collegeId: id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, rating: true, comment: true, createdAt: true, user: { select: { username: true, avatarUrl: true } } },
+    })),
+    streamSection(res, 'events', () => prisma.event.findMany({
+      where: { collegeId: id, date: { gte: new Date() } },
+      orderBy: { date: 'asc' },
+      select: { id: true, title: true, description: true, date: true, type: true },
+    })),
+    streamSection(res, 'questions', () => prisma.question.findMany({
+      where: { collegeId: id },
+      include: {
+        author: { select: { username: true, avatarUrl: true } },
+        answers: { include: { author: { select: { username: true, avatarUrl: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    })),
+  ]);
+
+  writeNdjson(res, { type: 'done' });
+  res.end();
+});

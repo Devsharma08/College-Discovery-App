@@ -1,17 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
+import EarthLoader from '../components/EarthLoader';
 import { useParams } from 'react-router-dom';
 import { API_URL } from '../config';
-import { MapPin, Star, GraduationCap, BookOpen, Trophy, Info, Loader2, Scale, MessageSquare, Bookmark, Send } from 'lucide-react';
-import type { College } from '../types';
-import { useCollegeHome } from '../context/collegeHome';
+import { MapPin, Star, GraduationCap, BookOpen, Trophy, Info, Scale, MessageSquare, Bookmark, Send, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { supabase, } from '../lib/supabase';
-import AdmissionPredictor from '../components/AdmissionPredictor';
-import { getCollegeImage } from '../lib/collegeImages';
+import { getHeroImage } from '../lib/collegeImages';
+import { Skeleton, TextSkeleton } from '../components/Skeleton';
+import { apiFetch, getErrorMessage, readNdjsonStream } from '../lib/api';
+
+const AdmissionPredictor = lazy(() => import('../components/AdmissionPredictor'));
 
 interface CollegeDetailProps {
-  addToCompare: (college: College) => void;
-  toggleSave: (college: College) => void;
+  addToCompare: (college: any) => void;
+  toggleSave: (college: any) => void;
   savedIds: Set<string>;
 }
 
@@ -25,209 +26,303 @@ interface Question {
 
 const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave, savedIds }) => {
   const { id } = useParams();
-  const [college, setCollege] = useState<College | null>(null);
-  const { loading, setLoading } = useCollegeHome();
+  const [college, setCollege] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<any[]>([]);
   const [loadingQuestion, setLoadingQuestion] = useState(false);
-  const [loadingAnswer, setLoadingAnswer] = useState(false);
   const [newQuestion, setNewQuestion] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [answerText, setAnswerText] = useState('');
+  const [loadingAnswer, setLoadingAnswer] = useState(false);
 
-  // Sub-resources states
+  // Review states
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewComment, setNewReviewComment] = useState('');
+  const [isPostingReview, setIsPostingReview] = useState(false);
+
+  // Sub-resources extracted from the single API response
   const [courses, setCourses] = useState<any[]>([]);
   const [placements, setPlacements] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
-
-
-  const supabaseClient = supabase;
+  const [events, setEvents] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchCollegeDetails = async () => {
-      setLoading(true)
+    const controller = new AbortController();
+
+    const loadCollegeStream = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`${API_URL}/api/colleges/${id}`);
-        if (!response.ok) {
-          setCollege(null);
-          return;
-        }
-        const data = await response.json();
-        setCollege(data);
+        setCollege(null);
+        setCourses([]);
+        setPlacements([]);
+        setFacilities([]);
+        setReviews([]);
+        setEvents([]);
+        setQuestions([]);
 
-        // Fetch sub-resources in parallel
-        const [courseRes, placeRes, facRes, revRes] = await Promise.all([
-          fetch(`${API_URL}/api/colleges/${id}/courses`).catch(() => null),
-          fetch(`${API_URL}/api/colleges/${id}/placements`).catch(() => null),
-          fetch(`${API_URL}/api/colleges/${id}/facilities`).catch(() => null),
-          fetch(`${API_URL}/api/colleges/${id}/reviews`).catch(() => null),
-        ]);
+        const response = await fetch(`${API_URL}/api/colleges/${id}/stream`, {
+          signal: controller.signal,
+        });
 
-        if (courseRes?.ok) setCourses(await courseRes.json());
-        if (placeRes?.ok) setPlacements(await placeRes.json());
-        if (facRes?.ok) setFacilities(await facRes.json());
-        if (revRes?.ok) setReviews(await revRes.json());
+        await readNdjsonStream(response, (message) => {
+          if (message.error?.message) {
+            console.warn(`Failed to stream ${message.type}: ${message.error.message}`);
+            return;
+          }
+
+          switch (message.type) {
+            case 'college':
+              setCollege(message.data);
+              setLoading(false);
+              break;
+            case 'courses':
+              setCourses(message.data as any[]);
+              break;
+            case 'placements':
+              setPlacements(message.data as any[]);
+              break;
+            case 'facilities':
+              setFacilities(message.data as any[]);
+              break;
+            case 'reviews':
+              setReviews(message.data as any[]);
+              break;
+            case 'events':
+              setEvents(message.data as any[]);
+              break;
+            case 'questions':
+              setQuestions(message.data as any[]);
+              break;
+            case 'error':
+              setCollege(null);
+              break;
+          }
+        });
       } catch (error) {
-        toast.error("Failed to fetch college details", { id: `college-detail-error-${id}` });
+        if ((error as Error).name !== 'AbortError') {
+          toast.error(getErrorMessage(error, 'Failed to load college details'));
+          setCollege(null);
+        }
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchCollegeDetails();
+    };
+
+    loadCollegeStream();
+    return () => controller.abort();
   }, [id]);
 
 
   useEffect(() => {
-    // Fetch initial questions from our API
-    const fetchQuestions = async () => {
-      try {
-        const res = await fetch(`${API_URL}/api/colleges/${id}/questions`);
-        const data = await res.json();
-        setQuestions(data);
-      } catch (err) {
-        console.error("Failed to fetch questions", err);
-      }
-    };
-    
-    fetchQuestions();
+    let isActive = true;
+    let cleanupRealtime: (() => void) | undefined;
 
     // 1. Polling Fallback (Every 30 seconds)
-    const pollInterval = setInterval(fetchQuestions, 30000);
+    const pollInterval = setInterval(() => {
+        apiFetch<any[]>(`${API_URL}/api/colleges/${id}/questions`).then(setQuestions).catch(console.error);
+    }, 30000);
 
-    // 2. Subscribe to new questions (Realtime)
-    const qChannel = supabaseClient
-      .channel(`college-questions-${id}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'Question', 
-        filter: `collegeId=eq.${id}` 
-      }, (payload) => {
-        setQuestions(prev => [{ ...payload.new as Question, answers: [], author: { username: 'Guest' } }, ...prev]);
-      })
-      .subscribe();
+    import('../lib/supabase').then(({ supabase }) => {
+      if (!isActive) return;
 
-    // 3. Subscribe to new answers (Realtime)
-    const aChannel = supabaseClient
-      .channel(`college-answers-${id}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'Answer' 
-      }, (payload) => {
-        setQuestions(prev => prev.map(q => 
-          q.id === payload.new.questionId 
-            ? { ...q, answers: [...(q.answers || []), { ...payload.new, author: { username: 'Guest' } }] } 
-            : q
-        ));
-      })
-      .subscribe();
+      // 2. Subscribe to new questions (Realtime)
+      const qChannel = supabase
+        .channel(`college-questions-${id}`)
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'Question', 
+          filter: `collegeId=eq.${id}` 
+        }, (payload) => {
+          setQuestions(prev => [{ ...payload.new as Question, answers: [], author: { username: 'Guest' } }, ...prev]);
+        })
+        .subscribe();
+
+      // 3. Subscribe to new answers (Realtime)
+      const aChannel = supabase
+        .channel(`college-answers-${id}`)
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'Answer' 
+        }, (payload) => {
+          setQuestions(prev => prev.map(q => 
+            q.id === payload.new.questionId 
+              ? { ...q, answers: [...(q.answers || []), { ...payload.new, author: { username: 'Guest' } }] } 
+              : q
+          ));
+        })
+        .subscribe();
+
+      cleanupRealtime = () => {
+        supabase.removeChannel(qChannel);
+        supabase.removeChannel(aChannel);
+      };
+    }).catch(console.error);
 
     return () => {
+      isActive = false;
       clearInterval(pollInterval);
-      supabaseClient.removeChannel(qChannel);
-      supabaseClient.removeChannel(aChannel);
+      cleanupRealtime?.();
     };
   }, [id]);
 
   const handleReplySubmit = async (e: React.FormEvent, questionId: string) => {
     e.preventDefault();
-    if (!answerText.trim() || loadingAnswer) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to reply');
+      return;
+    }
 
     setLoadingAnswer(true);
     try {
-      await fetch(`${API_URL}/api/questions/${questionId}/answers`, {
+      const data = await apiFetch<any>(`${API_URL}/api/questions/${questionId}/answers`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({ text: answerText })
       });
+      setQuestions(prev => prev.map(q => q.id === questionId ? { ...q, answers: [...(q.answers || []), data] } : q));
       setAnswerText('');
       setReplyingTo(null);
-      toast.success("Response posted!", { id: `answer-posted-${questionId}` });
-    } catch (error) {
-      toast.error("Failed to post response", { id: `answer-error-${questionId}` });
+      toast.success('Response posted!');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to post reply'));
     } finally {
       setLoadingAnswer(false);
     }
   };
 
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to leave a review');
+      return;
+    }
+
+    setIsPostingReview(true);
+    try {
+      const data = await apiFetch<any>(`${API_URL}/api/colleges/${id}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ rating: newReviewRating, comment: newReviewComment })
+      });
+
+      setReviews(prev => [data, ...prev]);
+      setNewReviewComment('');
+      setNewReviewRating(5);
+      toast.success('Review posted successfully!');
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to post review'));
+    } finally {
+      setIsPostingReview(false);
+    }
+  };
+
   const handleQuestionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to ask a question');
+      return;
+    }
+
     if (!newQuestion.trim()) return;
 
     setLoadingQuestion(true);
     try {
-      await fetch(`${API_URL}/api/colleges/${id}/questions`, {
+      const data = await apiFetch<any>(`${API_URL}/api/colleges/${id}/questions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
         body: JSON.stringify({ text: newQuestion })
       });
+      setQuestions(prev => [data, ...prev]);
       setNewQuestion('');
-      toast.success("Question posted!", { id: `question-posted-${id}` });
+      toast.success("Question posted!");
     } catch (error) {
-      toast.error("Failed to post question", { id: `question-error-${id}` });
+      toast.error(getErrorMessage(error, 'Failed to post question'));
     } finally {
       setLoadingQuestion(false);
     }
   };
 
 
-  if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
-      <Loader2 className="w-12 h-12 text-[#31572c] animate-spin" />
-      <p className="text-slate-500 font-medium">Loading details...</p>
-    </div>
-  );
-
-  if (!college) return (
-    <div className="flex flex-col items-center justify-center py-40 gap-4">
-      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-        <Info className="w-8 h-8 text-red-500" />
-      </div>
-      <h2 className="text-2xl font-black text-slate-800">College Not Found</h2>
-      <p className="text-slate-500 text-center max-w-sm">The college you are looking for doesn't exist or has been removed from our database.</p>
+  if (loading && !college) return (
+    <div className="flex flex-col items-center justify-center py-40">
+      <EarthLoader message="Locating institution..." />
     </div>
   );
 
   return (
     <div className="animate-page-in space-y-10">
       <div className="relative h-[460px] overflow-hidden rounded-[2rem] shadow-2xl shadow-slate-300">
-        <img src={getCollegeImage(college, 5)} className="w-full h-full object-cover" alt={college.name} decoding="async" />
+        <img src={getHeroImage(college)} className="w-full h-full object-cover" alt={college?.name || 'College'} decoding="async" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#14213d] via-[#14213d]/48 to-transparent" />
 
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <span className="bg-[#f4a261] text-[#14213d] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider">
-              {college.popularFor}
-            </span>
-            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
-              <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-              <span className="text-sm font-bold">{college.rating} Rating</span>
+        <div className="absolute bottom-0 left-0 right-0 z-10 mx-auto max-w-7xl px-4 py-12 text-white sm:px-6 lg:px-8">
+          {loading ? (
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-32 bg-white/20" />
+              <Skeleton className="h-16 w-3/4 bg-white/20" />
+              <div className="flex gap-4">
+                <Skeleton className="h-12 w-40 bg-white/20" />
+                <Skeleton className="h-12 w-40 bg-white/20" />
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
-              <MapPin className="w-4 h-4 text-white" />
-              <span className="text-sm">{college.location}</span>
+          ) : !college ? (
+            <div className="text-center py-20">
+               <h1 className="text-4xl font-bold">College Not Found</h1>
+               <p className="mt-4 opacity-70">We couldn't find the institution you're looking for.</p>
             </div>
-          </div>
-          <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-4xl text-balance">{college.name}</h1>
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={() => addToCompare(college)}
-              className="btn-primary flex-1 md:flex-none px-8 py-4"
-            >
-              <Scale className="w-5 h-5" /> Add to Compare
-            </button>
-            <button
-              onClick={() => toggleSave(college)}
-              className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 ${savedIds.has(college.id)
-                  ? 'bg-[#f4a261]/95 text-[#14213d] border-2 border-[#f4a261]'
-                  : 'bg-white text-slate-700 border-2 border-white hover:border-[#31572c] hover:text-[#31572c]'
-                }`}
-            >
-                <Bookmark className={`w-5 h-5 ${savedIds.has(college.id) ? 'fill-[#14213d]' : ''}`} />
-              {savedIds.has(college.id) ? 'Shortlisted' : 'Save for Later'}
-            </button>
-          </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-4 mb-6">
+                <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span className="text-sm font-bold">{college.rating} Rating</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/20">
+                  <MapPin className="w-4 h-4 text-white" />
+                  <span className="text-sm">{college.location}</span>
+                </div>
+                {college.popularFor && (
+                  <div className="flex items-center gap-1.5 bg-[#f4a261] px-4 py-1.5 rounded-full text-[#14213d] font-black uppercase text-[10px] tracking-widest shadow-lg">
+                    {college.popularFor}
+                  </div>
+                )}
+              </div>
+              <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-4xl text-balance drop-shadow-lg">{college.name}</h1>
+              <div className="flex flex-wrap gap-4">
+                <button
+                  onClick={() => addToCompare(college)}
+                  className="btn-primary flex-1 md:flex-none px-8 py-4"
+                >
+                  <Scale className="w-5 h-5" /> Add to Compare
+                </button>
+                <button
+                  onClick={() => toggleSave(college)}
+                  className={`flex-1 md:flex-none px-8 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 ${savedIds.has(college.id)
+                      ? 'bg-[#f4a261]/95 text-[#14213d] border-2 border-[#f4a261]'
+                      : 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30 backdrop-blur-md'
+                    }`}
+                >
+                  <Bookmark className={`w-5 h-5 ${savedIds.has(college.id) ? 'fill-current' : ''}`} />
+                  {savedIds.has(college.id) ? 'Saved' : 'Shortlist'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -240,19 +335,29 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
               <Info className="text-[#31572c]" /> About the Institution
             </h2>
             <p className="text-slate-600 leading-relaxed text-lg">
-              {college.details?.description || "No description available."}
+              {loading ? <TextSkeleton count={5} /> : (college?.details?.description || "No description available.")}
             </p>
           </section>
 
           {/* Courses & Programs */}
           <section className="surface p-8 rounded-3xl space-y-6">
-            <h2 className="text-2xl font-black flex items-center gap-3">
-              <BookOpen className="text-[#31572c]" /> Academic Programs
-            </h2>
-            {courses && courses.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4">
-                {courses.map((c, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold flex items-center gap-3">
+                <GraduationCap className="text-[#31572c]" /> Courses & Fees
+              </h2>
+              {courses.length > 0 && (
+                <span className="text-sm font-bold text-slate-400">{courses.length} Programs Available</span>
+              )}
+            </div>
+
+            {courses.length === 0 ? (
+              <div className="space-y-4">
+                <Skeleton className="h-16 w-full" count={3} />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {courses.map((c: any) => (
+                  <div key={c.id} className="flex items-center justify-between p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100 hover:border-[#31572c]/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="bg-white p-2 rounded-lg shadow-sm">
                         <GraduationCap className="w-5 h-5 text-[#31572c]" />
@@ -269,60 +374,41 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {college.details?.programs?.split(',').map((prog, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-4 bg-[#f6f4ee] rounded-2xl border border-slate-100">
-                    <div className="bg-white p-2 rounded-lg shadow-sm">
-                      <GraduationCap className="w-5 h-5 text-[#31572c]" />
-                    </div>
-                    <span className="font-semibold text-slate-700">{prog.trim()}</span>
-                  </div>
-                ))}
-              </div>
             )}
           </section>
 
           {/* Placements & Facilities */}
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {placements && placements.length > 0 ? (
+            {!placements ? (
+              <div className="surface p-8 rounded-3xl space-y-4">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-12 w-1/2" />
+                <Skeleton className="h-6 w-1/3" />
+              </div>
+            ) : placements.length > 0 ? (
               <div className="surface p-8 rounded-3xl">
-                <Scale className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
+                <Trophy className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
                 <h3 className="text-xl font-bold text-slate-800 mb-2">Placements ({placements[0].year})</h3>
                 <p className="text-4xl font-black text-[#0e7490]">{placements[0].placementPercentage}%</p>
                 <p className="text-slate-500 mt-2 text-sm">Avg: Rs. {(placements[0].averagePackage / 100000).toFixed(1)} LPA</p>
                 <p className="text-slate-500 text-sm">High: Rs. {(placements[0].highestPackage / 100000).toFixed(1)} LPA</p>
                 <p className="text-slate-400 text-xs mt-3 line-clamp-2">Top Recruiters: {placements[0].topRecruiters?.join(', ')}</p>
               </div>
-            ) : (
-              <div className="surface p-8 rounded-3xl">
-                <Scale className="w-10 h-10 mb-4 text-[#0e7490] opacity-40" />
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Placements</h3>
-                <p className="text-4xl font-black text-[#0e7490]">92%</p>
-                <p className="text-slate-500 mt-2 text-sm">Average package of Rs. 12.5 LPA for the 2023 batch.</p>
-              </div>
-            )}
+            ) : null}
 
             {facilities && facilities.length > 0 ? (
               <div className="bg-gradient-to-br from-[#203d1f] to-[#31572c] p-8 rounded-3xl text-white shadow-xl">
                 <Trophy className="w-10 h-10 mb-4 opacity-50" />
                 <h3 className="text-xl font-bold mb-4">Top Facilities</h3>
                 <div className="flex flex-wrap gap-2">
-                  {facilities.slice(0, 5).map((f, i) => (
+                  {facilities.map((f, i) => (
                     <span key={i} className="bg-white/20 text-xs px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/10">
                       {f.facility?.name || f.name}
                     </span>
                   ))}
                 </div>
               </div>
-            ) : (
-              <div className="bg-gradient-to-br from-[#203d1f] to-[#31572c] p-8 rounded-3xl text-white shadow-xl">
-                <Trophy className="w-10 h-10 mb-4 opacity-50" />
-                <h3 className="text-xl font-bold mb-2">NIRF Ranking</h3>
-                <p className="text-4xl font-black">#12</p>
-                <p className="text-emerald-50/75 mt-2 text-sm">Consistent performer in Top 20 institutes in India.</p>
-              </div>
-            )}
+            ) : null}
           </section>
         </div>
 
@@ -364,7 +450,9 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
             </button>
           </div>
 
-          <AdmissionPredictor collegeId={id} initialExam="Entrance" />
+          <Suspense fallback={<Skeleton className="h-96 w-full rounded-[2rem]" />}>
+            <AdmissionPredictor collegeId={id} initialExam="Entrance" />
+          </Suspense>
         </div>
       </div>
       {/* Community Q&A Section */}
@@ -472,20 +560,68 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
       </section>
 
       {/* Reviews Section */}
-      {reviews && reviews.length > 0 && (
-        <section className="surface p-8 rounded-3xl space-y-8 mt-12">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold flex items-center gap-3">
-              <Star className="text-amber-500" /> Student Reviews
-            </h2>
-            <span className="text-sm font-medium text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
-              {reviews.length} Reviews
-            </span>
+      <section className="surface p-8 rounded-3xl space-y-8 mt-12">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <Star className="text-amber-500" /> Student Reviews
+          </h2>
+          <span className="text-sm font-medium text-slate-400 bg-slate-50 px-3 py-1 rounded-full">
+            {reviews?.length || 0} Reviews
+          </span>
+        </div>
+
+        {/* Post Review Form */}
+        <form onSubmit={handleReviewSubmit} className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-slate-700 mb-2">Rate your experience</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setNewReviewRating(star)}
+                    className="transition-transform active:scale-125"
+                  >
+                    <Star 
+                      className={`w-6 h-6 ${star <= newReviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`} 
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-slate-400 max-w-[200px]">Your review helps other students make informed decisions.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.map((r: any) => (
-              <div key={r.id} className="p-6 bg-white/82 border border-slate-100 rounded-2xl shadow-sm space-y-3">
+          <div className="relative">
+            <textarea
+              value={newReviewComment}
+              onChange={(e) => setNewReviewComment(e.target.value)}
+              placeholder="Share your thoughts about the campus, faculty, or placements..."
+              className="w-full p-4 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#31572c] bg-white resize-none"
+              rows={3}
+              required
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={isPostingReview || !newReviewComment.trim()}
+              className="btn-primary px-8 py-3 disabled:opacity-50"
+            >
+              {isPostingReview ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Post Review
+            </button>
+          </div>
+        </form>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {!reviews ? (
+            <Skeleton className="h-32 w-full rounded-2xl" count={2} />
+          ) : reviews.length > 0 ? (
+            reviews.map((r: any) => (
+              <div key={r.id} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm space-y-3 hover:border-slate-200 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600 font-bold text-xs">
@@ -501,10 +637,39 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
                 <p className="text-slate-600 text-sm italic">"{r.comment}"</p>
                 <span className="text-[10px] text-slate-400 block">{new Date(r.createdAt).toLocaleDateString()}</span>
               </div>
+            ))
+          ) : (
+            <div className="col-span-full text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              <p className="text-slate-400">No reviews yet. Be the first to share your experience!</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Upcoming Events */}
+      <section className="surface p-8 rounded-3xl space-y-6 mt-12">
+        <h2 className="text-2xl font-bold flex items-center gap-3">
+          <BookOpen className="text-[#31572c]" /> Upcoming Events
+        </h2>
+        {!events ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Skeleton className="h-32 w-full rounded-2xl" count={3} />
+          </div>
+        ) : events.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {events.map((ev: any) => (
+              <div key={ev.id} className="p-5 rounded-2xl bg-[#f6f4ee] border border-slate-100 space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#31572c] bg-[#31572c]/10 px-2 py-0.5 rounded-full">{ev.type}</span>
+                <h4 className="font-bold text-slate-800">{ev.title}</h4>
+                {ev.description && <p className="text-sm text-slate-500 line-clamp-2">{ev.description}</p>}
+                <p className="text-xs font-bold text-slate-400">{new Date(ev.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              </div>
             ))}
           </div>
-        </section>
-      )}
+        ) : (
+          <p className="text-slate-400 text-center py-8">No upcoming events scheduled.</p>
+        )}
+      </section>
 
     </div>
 

@@ -1,10 +1,10 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import zlib from 'zlib';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 import { prisma } from './config/prisma';
-import { CACHE_TTL_MS } from './utils/cache';
+import { errorHandler, notFoundHandler } from './utils/errors';
 
 import collegeRoutes from './routes/college.routes';
 import predictorRoutes from './routes/predictor.routes';
@@ -23,33 +23,24 @@ dotenv.config({
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Compression logic
 app.use(compression({
   filter: (req: Request, res: Response): boolean => {
     if (req.headers['x-no-compression']) return false;
+    if (res.getHeader('Content-Type') === 'text/event-stream') return false;
     return compression.filter(req, res);
   },
-  zlib: { level: 6 },
   memLevel: 8,
-  threshold: 1024 // only compress > 1kb data
+  threshold: 1024
 }));
 
-const brotliOptions = {
-  chunkSize: 16 * 1024,
-  params: {
-    [zlib.constants.BROTLI_PARAM_QUALITY]: 6,
-  }
-};
+app.disable('x-powered-by');
 
-app.use(compression({ brotli: brotliOptions } as any));
-
-// Caching middleware
-app.use((req: Request, res: Response, next) => {
-  res.set('Cache-Control', `public, max-age=${CACHE_TTL_MS / 1000}`);
+app.use((req, res, next) => {
+  const requestId = req.headers['x-request-id']?.toString() || crypto.randomUUID();
+  res.locals.requestId = requestId;
+  res.setHeader('X-Request-Id', requestId);
   next();
 });
-
-app.disable('x-powered-by');
 
 const allowedOrigins = [
   process.env.CLIENT_ORIGIN,
@@ -76,11 +67,6 @@ app.use(cors({
 
 app.use(express.json({ limit: '64kb' }));
 
-app.use((_req, res, next) => {
-  res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
-  next();
-});
-
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
@@ -90,6 +76,9 @@ app.use('/api/predictor', predictorRoutes);
 app.use('/api/compare', compareRoutes);
 app.use('/api/questions', qaRoutes);
 app.use('/api/ai', aiRoutes);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

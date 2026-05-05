@@ -1,20 +1,24 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { getCached, setCached } from '../utils/cache';
+import { ApiError, asyncHandler } from '../utils/errors';
 
-export const compareColleges = async (req: Request, res: Response): Promise<void> => {
-  try {
+export const compareColleges = asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { collegeIds } = req.body;
     if (!collegeIds || !Array.isArray(collegeIds)) {
-      res.status(400).json({ error: 'collegeIds must be an array' });
-      return;
+      throw new ApiError(400, 'collegeIds must be an array', 'INVALID_COLLEGE_IDS');
     }
     
-    const ids = collegeIds.filter((id): id is string => typeof id === 'string').slice(0, 3);
+    const ids = [...new Set(collegeIds.filter((id): id is string => typeof id === 'string'))].slice(0, 3);
+    if (ids.length === 0) {
+      throw new ApiError(400, 'At least one college id is required', 'INVALID_COLLEGE_IDS');
+    }
+
     const cacheKey = `compare:${ids.sort().join(',')}`;
     const cached = getCached(cacheKey);
     
     if (cached) {
+      res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
       res.json(cached);
       return;
     }
@@ -30,8 +34,6 @@ export const compareColleges = async (req: Request, res: Response): Promise<void
     });
 
     setCached(cacheKey, colleges);
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     res.json(colleges);
-  } catch (error) {
-    res.status(500).json({ error: 'Comparison failed' });
-  }
-};
+});

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { College } from '../types'
 import { API_URL } from '../config'
+import { apiFetch } from '../lib/api'
 
 
 interface CollegeHomeType {
@@ -29,17 +30,8 @@ export const HomeContextProvider = ({ children }: { children: ReactNode }) => {
         
          setLoading(true);
          try {
-            const res = await fetch(`${API_URL}/api/colleges?limit=12`, {
-               method: "GET",
-               headers: {
-                  'Content-Type': 'application/json'
-               }
-            });
-            
-            if (res.ok) {
-               const data = await res.json();
-               setColleges(data);
-            }
+            const data = await apiFetch<College[]>(`${API_URL}/api/colleges?limit=12`);
+            setColleges(data);
          } catch (error) {
             console.error("API Fetch Error:", error);
          } finally {

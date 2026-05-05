@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../config/prisma';
 import { AuthRequest } from '../middleware/auth.middleware';
+import { paramToString } from '../utils/helpers';
 
 // ==========================================
 // WISHLIST / FAVORITES
@@ -124,7 +125,7 @@ export const addAcademicRecord = async (req: AuthRequest, res: Response): Promis
 export const deleteAcademicRecord = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-    const { id } = req.params;
+    const id = paramToString(req.params.id);
     
     if (!userId) {
       res.status(401).json({ error: 'Unauthorized' });

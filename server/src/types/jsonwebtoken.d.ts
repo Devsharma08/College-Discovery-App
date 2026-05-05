@@ -1,0 +1,11 @@
+declare module 'jsonwebtoken' {
+  export function sign(payload: string | object | Buffer, secretOrPrivateKey: string, options?: { expiresIn?: string | number }): string;
+  export function verify(token: string, secretOrPublicKey: string): string | object;
+
+  const jwt: {
+    sign: typeof sign;
+    verify: typeof verify;
+  };
+
+  export default jwt;
+}
