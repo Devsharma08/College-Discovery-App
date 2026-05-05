@@ -56,20 +56,22 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'https://college-discovery-app-pv2yerku3-users-projects-426e2b02.vercel.app',
+  'https://college-discovery-app-one.vercel.app',
   'https://college-discovery-app-pzv7.vercel.app',
-  'https://college-discovery-app-pzv7-git-main-users-projects-426e2b02.vercel.app',
-  'https://college-discovery-app-pzv7-c2vkitnxg-users-projects-426e2b02.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({ 
   origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, server-to-server)
     if (!origin) return callback(null, true);
+    // Allow any Vercel preview or explicit allowlist
     if (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+      return callback(null, origin); // echo back the actual requesting origin
     }
-  } 
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
 }));
 
 app.use(express.json({ limit: '64kb' }));
