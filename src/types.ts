@@ -7,6 +7,7 @@ export interface College {
   rating: number;
   fees: number;
   popularFor: string;
+  type?: string;
   imgUrl: string;
   details?: CollegeDetails;
   cutoffs?: Cutoff[];

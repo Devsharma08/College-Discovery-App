@@ -56,11 +56,13 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
   const [state, setStateLoc] = useState(searchParams.get('state') || '');
   const [city, setCity] = useState('');
   const [facility, setFacility] = useState('');
+  const [type, setType] = useState('');
   const [sort, setSort] = useState('');
   // Dynamic filter options from backend
   const [availableStates, setAvailableStates] = useState<string[]>([]);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [availableCourses, setAvailableCourses] = useState<string[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch filter meta once
@@ -70,6 +72,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
         if (data.states) setAvailableStates(data.states);
         if (data.cities) setAvailableCities(data.cities);
         if (data.courses) setAvailableCourses(data.courses);
+        if (data.types) setAvailableTypes(data.types);
       })
       .catch((err) => console.error(getErrorMessage(err, 'Failed to load filters')));
   }, []);
@@ -102,6 +105,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
         if (state) url.searchParams.append('state', state);
         if (city) url.searchParams.append('city', city);
         if (facility) url.searchParams.append('facility', facility);
+        if (type) url.searchParams.append('type', type);
         if (sort) url.searchParams.append('sort', sort);
 
         const data = await apiFetch<College[]>(url.toString(), { signal: controller.signal });
@@ -132,14 +136,13 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
     return () => controller.abort();
   }, [page, debouncedSearch, maxFees, course, state, city, facility, sort]);
 
-  // Reset to page 1 whenever any filter changes
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     setColleges([]); // clear stale data immediately so the user sees a fresh load
-  }, [debouncedSearch, maxFees, course, state, city, facility, sort]);
+  }, [debouncedSearch, maxFees, course, state, city, facility, type, sort]);
 
-  const activeFilterCount = [debouncedSearch, maxFees, course, state, city, facility, sort].filter(Boolean).length;
+  const activeFilterCount = [debouncedSearch, maxFees, course, state, city, facility, type, sort].filter(Boolean).length;
 
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -188,7 +191,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
             <div className="flex items-center gap-4">
               {activeFilterCount > 0 && (
                 <button 
-                  onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setSort(''); }}
+                  onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setType(''); setSort(''); }}
                   className="text-[9px] font-black text-red-500 uppercase tracking-widest hover:underline"
                 >
                   Clear
@@ -242,14 +245,19 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
               </div>
             </div>
 
-            {/* NEW: College Type Section */}
+            {/* Institution Type Section */}
             <div>
               <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-4 ml-1">Institution Type</label>
               <div className="space-y-2">
-                {['Government', 'Private', 'Deemed', 'Autonomous'].map(type => (
-                  <label key={type} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-slate-50 bg-slate-50/30 cursor-pointer hover:bg-white hover:border-slate-200 transition-all">
-                    <input type="checkbox" className="w-3.5 h-3.5 rounded border-slate-300 text-[#31572c] focus:ring-[#31572c]" />
-                    <span className="text-[11px] font-bold text-slate-600">{type}</span>
+                {(availableTypes.length > 0 ? availableTypes : ['Government', 'Private', 'Deemed', 'Autonomous']).map(t => (
+                  <label key={t} className={`flex items-center gap-3 px-3 py-2 rounded-xl border cursor-pointer transition-all ${type === t ? 'bg-[#31572c] border-[#31572c] text-white' : 'border-slate-50 bg-slate-50/30 hover:bg-white hover:border-slate-200'}`}>
+                    <input 
+                      type="checkbox" 
+                      checked={type === t}
+                      onChange={() => setType(type === t ? '' : t)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-[#31572c] focus:ring-[#31572c]" 
+                    />
+                    <span className={`text-[11px] font-bold ${type === t ? 'text-white' : 'text-slate-600'}`}>{t}</span>
                   </label>
                 ))}
               </div>
@@ -340,7 +348,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
               <h3 className="text-xl font-bold text-slate-700">No colleges found</h3>
               <p className="text-slate-500 max-w-sm">Try adjusting your filters or search query to discover more colleges.</p>
               <button
-                onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setSort(''); }}
+                onClick={() => { setSearch(''); setMaxFees(''); setCourse(''); setStateLoc(''); setCity(''); setFacility(''); setType(''); setSort(''); }}
                 className="btn-primary px-6 py-3 mt-2"
               >
                 Clear All Filters

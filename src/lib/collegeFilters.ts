@@ -7,6 +7,7 @@ export interface CollegeFilterMeta {
   cities: string[];
   facilities: string[];
   courses: string[];
+  types: string[];
 }
 
 const FALLBACK_COURSES = [
@@ -35,6 +36,7 @@ export const getCollegeFilterMeta = async (): Promise<CollegeFilterMeta> => {
       cities: meta.cities || [],
       facilities: meta.facilities || [],
       courses: meta.courses?.length ? meta.courses : FALLBACK_COURSES,
+      types: meta.types || [],
     };
   }
 
@@ -46,5 +48,6 @@ export const getCollegeFilterMeta = async (): Promise<CollegeFilterMeta> => {
     cities: uniqueSorted(colleges.map((college) => college.city)),
     facilities: [],
     courses: courses.length ? courses : FALLBACK_COURSES,
+    types: uniqueSorted(colleges.map((college) => college.type)),
   };
 };

@@ -59,6 +59,7 @@ const TOP_RECRUITERS = [
   'Apollo Hospitals, Fortis, Max Healthcare', 'HDFC Bank, ICICI Bank, Axis Bank',
   'Flipkart, Paytm, Zomato, Swiggy', 'IBM, Accenture, Capgemini'
 ];
+const TYPES = ['Government', 'Private', 'Deemed', 'Autonomous'];
 
 const IMAGES = [
   'https://images.unsplash.com/photo-1562774053-701939374585',
@@ -169,6 +170,7 @@ async function main() {
         rating,
         fees,
         popularFor,
+        type: randomEl(TYPES),
         imgUrl,
         details: {
           create: {
@@ -181,7 +183,7 @@ async function main() {
         cutoffs: { create: cutoffs },
         placementStats: { create: placements },
         reviews: {
-          create: Array.from({ length: randomInt(0, 5) }).map(() => ({
+          create: Math.random() > 0.5 ? [{
             userId: studentUser.id,
             rating: randomInt(3, 5),
             comment: randomEl([
@@ -191,7 +193,7 @@ async function main() {
               'Strict curriculum but it pays off during placements.',
               'Amazing experience, made great friends.'
             ])
-          }))
+          }] : []
         },
         facilities: {
           create: selectedFacilities.map(f => ({

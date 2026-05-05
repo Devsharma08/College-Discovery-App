@@ -14,10 +14,10 @@ const setPrivateNoStore = (res: Response) => {
 };
 
 export const getColleges = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { search, state, city, maxFees, course, facility, sort } = req.query;
+    const { search, state, city, maxFees, course, facility, type, sort } = req.query;
     const take = toPositiveInt(req.query.limit, 30, 60);
     const skip = toPositiveInt(req.query.offset, 0, 10_000);
-    const cacheKey = `colleges:light:${search ?? ''}:${state ?? ''}:${city ?? ''}:${maxFees ?? ''}:${course ?? ''}:${facility ?? ''}:${sort ?? ''}:${take}:${skip}`;
+    const cacheKey = `colleges:light:${search ?? ''}:${state ?? ''}:${city ?? ''}:${maxFees ?? ''}:${course ?? ''}:${facility ?? ''}:${type ?? ''}:${sort ?? ''}:${take}:${skip}`;
     const cached = getCached(cacheKey);
     
     if (cached) {
@@ -40,6 +40,7 @@ export const getColleges = asyncHandler(async (req: Request, res: Response): Pro
           maxFees ? { fees: { lte: Number(maxFees) } } : {},
           course ? { courses: { some: { name: { contains: String(course), mode: 'insensitive' } } } } : {},
           facility ? { facilities: { some: { facility: { name: { contains: String(facility), mode: 'insensitive' } } } } } : {},
+          type ? { type: String(type) } : {},
         ]
       },
       take,
@@ -54,8 +55,10 @@ export const getColleges = asyncHandler(async (req: Request, res: Response): Pro
         rating: true,
         fees: true,
         imgUrl: true,
-        popularFor: true
-        // Details/Cutoffs excluded to keep packet light!
+        popularFor: true,
+        type: true,
+        city: true,
+        state: true
       }
     });
 
@@ -82,8 +85,9 @@ export const getFilters = asyncHandler(async (_req: Request, res: Response): Pro
     const cities = [...new Set(collegeRows.map(c => c.city).filter(Boolean))].sort() as string[];
     const facilities = [...new Set(facilitiesObj.map(f => f.name).filter(Boolean))].sort();
     const courses = [...new Set(courseRows.map(c => c.name).filter(Boolean))].sort();
+    const types = [...new Set(collegeRows.map(c => c.type).filter(Boolean))].sort() as string[];
 
-    const data = { states, cities, facilities, courses };
+    const data = { states, cities, facilities, courses, types };
     setCached('college:meta:filters', data);
     setPublicCache(res, 300);
     res.json(data);

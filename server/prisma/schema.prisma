@@ -95,6 +95,7 @@ model College {
   rating         Float
   fees           Int
   popularFor     String
+  type           String?                  // e.g., "Government", "Private", "Deemed", "Autonomous"
   imgUrl         String
   details        CollegeDetails?
   preferences    UserCollegePreferences[]
@@ -110,6 +111,7 @@ model College {
 
   @@index([state])
   @@index([city])
+  @@index([type])
   @@index([rating])
   @@index([fees])
   @@index([name])
