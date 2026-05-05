@@ -964,4 +964,3 @@ CampusFinder should not become a cluttered clone. The best direction is:
   6. SEO footer and long-tail landing pages.
 
 The strongest near-term win is the listing page table plus detail tabs, because those directly improve the core college research workflow without needing a large new data model.
-
