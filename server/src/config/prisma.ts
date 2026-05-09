@@ -14,14 +14,8 @@ if (connectionString && connectionString.includes('pooler.supabase.com')) {
   );
 }
 
-const prismaOptions = connectionString ? {
-  datasources: {
-    db: {
-      url: connectionString
-    }
-  }
-} : undefined;
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient(prismaOptions);
+export const prisma = globalForPrisma.prisma ?? (connectionString 
+  ? new PrismaClient({ datasources: { db: { url: connectionString } } }) 
+  : new PrismaClient());
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

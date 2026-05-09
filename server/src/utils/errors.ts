@@ -93,12 +93,13 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     console.error(`[${requestId}] ${req.method} ${req.originalUrl}`, err);
   }
 
+  const dbUrl = process.env.DATABASE_URL;
   res.status(statusCode).json({
     error: {
       code,
       message: err instanceof Error ? err.message : message,
       requestId,
-      debug_db_url: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':***@') : 'MISSING',
+      debug_db_url: dbUrl ? dbUrl.replace(/:([^:@]+)@/, ':***@') : 'MISSING',
       ...(process.env.NODE_ENV !== 'production' && details ? { details } : {}),
     },
   });
