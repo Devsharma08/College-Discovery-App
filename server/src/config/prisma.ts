@@ -7,8 +7,9 @@ const globalForPrisma = globalThis as unknown as {
 let connectionString = process.env.DATABASE_URL;
 // Ensure Supabase project ref is in the username to prevent Vercel connection failures
 if (connectionString && connectionString.includes('pooler.supabase.com')) {
+  // Support both postgres:// and postgresql:// and ensure project ref is appended
   connectionString = connectionString.replace(
-    'postgresql://postgres:',
+    /postgres(ql)?:\/\/postgres:/,
     'postgresql://postgres.conesevqsbvrjhldeokj:'
   );
 }

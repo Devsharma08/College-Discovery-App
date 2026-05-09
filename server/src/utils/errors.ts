@@ -24,7 +24,7 @@ export const asyncHandler =
 
 export const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
-  maxRetries = 3,
+  maxRetries = 0,
   baseDelay = 1000
 ): Promise<T> => {
   let lastError: unknown;
@@ -96,8 +96,9 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
   res.status(statusCode).json({
     error: {
       code,
-      message,
+      message: err instanceof Error ? err.message : message,
       requestId,
+      debug_db_url: process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:([^:@]+)@/, ':***@') : 'MISSING',
       ...(process.env.NODE_ENV !== 'production' && details ? { details } : {}),
     },
   });
