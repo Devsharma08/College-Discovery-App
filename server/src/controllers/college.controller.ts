@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { deleteCachedByPrefix, getCached, setCached } from '../utils/cache';
 import { paramToString, toPositiveInt } from '../utils/helpers';
-import { ApiError, asyncHandler } from '../utils/errors';
+import { ApiError, asyncHandler, retryWithBackoff } from '../utils/errors';
 import { beginNdjsonStream, streamSection, writeNdjson } from '../utils/stream';
 
 const setPublicCache = (res: Response, seconds = 60) => {
@@ -31,7 +31,7 @@ export const getColleges = asyncHandler(async (req: Request, res: Response): Pro
     else if (sort === 'fees_desc') orderBy = [{ fees: 'desc' }, { id: 'asc' }];
     else if (sort === 'rating_asc') orderBy = [{ rating: 'asc' }, { id: 'asc' }];
     
-    const colleges = await prisma.college.findMany({
+    const colleges = await retryWithBackoff(() => prisma.college.findMany({
       where: {
         AND: [
           search ? { name: { contains: String(search), mode: 'insensitive' } } : {},
@@ -56,9 +56,19 @@ export const getColleges = asyncHandler(async (req: Request, res: Response): Pro
         fees: true,
         imgUrl: true,
         popularFor: true,
-        type: true
+        type: true,
+        placementStats: {
+          orderBy: { year: 'desc' },
+          take: 1,
+          select: { highestPackage: true, averagePackage: true, placementPercentage: true }
+        },
+        cutoffs: {
+          take: 3,
+          orderBy: { maxRank: 'asc' },
+          select: { examName: true, maxRank: true }
+        }
       }
-    });
+    }));
 
     setCached(cacheKey, colleges);
     setPublicCache(res);
@@ -73,11 +83,11 @@ export const getFilters = asyncHandler(async (_req: Request, res: Response): Pro
       return;
     }
 
-    const [collegeRows, facilitiesObj, courseRows] = await Promise.all([
+    const [collegeRows, facilitiesObj, courseRows] = await retryWithBackoff(() => Promise.all([
       prisma.college.findMany({ select: { state: true, city: true, type: true } }),
       prisma.facility.findMany({ select: { name: true } }),
       prisma.course.findMany({ select: { name: true }, distinct: ['name'] }),
-    ]);
+    ]));
 
     const states = [...new Set(collegeRows.map(c => c.state).filter(Boolean))].sort() as string[];
     const cities = [...new Set(collegeRows.map(c => c.city).filter(Boolean))].sort() as string[];

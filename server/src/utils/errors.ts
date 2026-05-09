@@ -22,6 +22,36 @@ export const asyncHandler =
     Promise.resolve(handler(req, res, next)).catch(next);
   };
 
+export const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Check if it's a rate limit error (429)
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2028') {
+        // P2028 is for connection errors, but for Supabase, rate limits might be different
+        // Actually, Supabase rate limits are HTTP 429, but Prisma might wrap it.
+        // For now, retry on any error, but specifically check for rate limit.
+      }
+
+      if (attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+};
+
 export const notFoundHandler = (req: Request, _res: Response, next: NextFunction) => {
   next(new ApiError(404, `Route not found: ${req.method} ${req.originalUrl}`, 'NOT_FOUND'));
 };

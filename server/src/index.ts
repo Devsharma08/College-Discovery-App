@@ -4,6 +4,7 @@ import compression from 'compression';
 import dotenv from 'dotenv';
 import crypto from 'crypto';
 import { prisma } from './config/prisma';
+import {resolve} from 'path';
 import { errorHandler, notFoundHandler } from './utils/errors';
 
 import collegeRoutes from './routes/college.routes';
@@ -16,7 +17,7 @@ import userRoutes from './routes/user.routes';
 import adminRoutes from './routes/admin.routes';
 
 dotenv.config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development',
+  path: resolve(process.cwd(),process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development'),
   override: true
 });
 
@@ -96,10 +97,16 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`🚀 Production Server running on port ${PORT}`);
-  } else {
-    console.log(`🛠️ Development Server running on http://localhost:${PORT}`);
-  }
-});
+// For Vercel serverless deployment
+export default app;
+
+// For local development
+if (require.main === module) {
+  app.listen(PORT, () => {
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🚀 Production Server running on port ${PORT}`);
+    } else {
+      console.log(`🛠️ Development Server running on http://localhost:${PORT}`);
+    }
+  });
+}

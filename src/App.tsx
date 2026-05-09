@@ -30,6 +30,7 @@ const Home = lazy(() => import('./pages/Home'));
 const SavedList = lazy(() => import('./pages/SavedList'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
+const Courses = lazy(() => import('./pages/Courses'));
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `relative rounded-full px-4 py-2 text-sm font-semibold transition-all ${
@@ -217,6 +218,7 @@ const AppContent: React.FC = () => {
               </div>
 
               <NavLink to="/discover" className={navClass} onClick={() => setIsMenuOpen(false)}>Discover</NavLink>
+              <NavLink to="/courses" className={navClass} onClick={() => setIsMenuOpen(false)}>Courses</NavLink>
               <NavLink to="/saved" className={navClass} onClick={() => setIsMenuOpen(false)}>
                 <span className="inline-flex items-center gap-2">
                   Saved
@@ -353,6 +355,7 @@ const AppContent: React.FC = () => {
                 </ProtectedRoute>
               } 
             />
+            <Route path="/courses" element={<Courses addToCompare={addToCompare} toggleSave={toggleSave} savedIds={savedIds} compareIds={compareIds} />} />
             <Route path="/auth" element={<AuthPage />} />
           </Routes>
         </Suspense>

@@ -11,6 +11,11 @@ export interface College {
   imgUrl: string;
   details?: CollegeDetails;
   cutoffs?: Cutoff[];
+  placementStats?: Array<{
+    highestPackage: number;
+    averagePackage: number;
+    placementPercentage: number;
+  }>;
 }
 
 export interface CollegeDetails {

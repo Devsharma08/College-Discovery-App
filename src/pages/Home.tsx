@@ -16,7 +16,8 @@ import {
   Building2,
   Globe2,
   BookOpen,
-  Filter
+  Filter,
+  Trophy
 } from 'lucide-react';
 import { useCollegeHome } from '../context/collegeHome';
 import { Skeleton } from '../components/Skeleton';
@@ -132,11 +133,11 @@ const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compare
                 </span>
               </span>
             </Link>
-            <Link to="/predictor" className="btn-val group">
+            <Link to="/courses" className="btn-val group">
               <span className="btn-val_lg border border-slate-200 bg-white !py-3">
                 <span className="btn-val_sl bg-slate-50"></span>
                 <span className="btn-val_text flex items-center gap-2 text-white  transition-colors duration-300 font-black text-[11px] uppercase tracking-widest text-slate-600">
-                  Smart Predictor
+                  <Trophy className="w-4 h-4 text-[#31572c]" /> Course Library
                 </span>
               </span>
             </Link>

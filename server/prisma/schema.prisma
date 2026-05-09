@@ -145,6 +145,8 @@ model Cutoff {
   college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([examName, maxRank])
+  @@index([maxRank])
+  @@index([examName])
   @@index([collegeId])
 }
 
@@ -174,10 +176,16 @@ model Course {
   tuitionFee      Int
   seatsAvailable  Int?
   
+  courseCategoryId String?
+  courseCategory   CourseCategory? @relation(fields: [courseCategoryId], references: [id])
+
   college         College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([collegeId])
   @@index([name])
+  @@index([level])
+  @@index([tuitionFee])
+  @@index([durationInYears])
 }
 
 model PlacementStat {
@@ -221,4 +229,38 @@ model Event {
   college     College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
 
   @@index([collegeId])
+}
+
+model Exam {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  fullName    String?
+  description String?
+  date        DateTime?
+  type        String?   // e.g., "Engineering", "Medical", "Management"
+  level       String?   // e.g., "National", "State"
+  imgUrl      String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([level])
+}
+
+model CourseCategory {
+  id              String   @id @default(uuid())
+  name            String   @unique // e.g., "Computer Science Engineering"
+  description     String   // Detailed paragraph
+  rules           String   // Rules followed in colleges
+  expectedJobs    String[] // Expected job roles
+  avgPackage      Float?   // Expected package
+  enrollmentStats String?  // Expected enrollment
+  opportunities   String?  // Career opportunities
+  
+  courses         Course[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name])
 }

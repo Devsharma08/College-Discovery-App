@@ -34,6 +34,7 @@ export type CollegeWithCutoffs = Awaited<ReturnType<typeof prisma.college.findMa
   cutoffs: Array<{ examName: string; maxRank: number; category?: string | null }>;
 };
 
+
 export const getBestCutoffForRank = (college: CollegeWithCutoffs, exam: string, category: string, rank: number) => {
   const normalizedCategory = normalizeText(category);
   const categoryMatches = (cutoff: { category?: string | null }) =>
@@ -56,6 +57,7 @@ export const getBestCutoffForRank = (college: CollegeWithCutoffs, exam: string, 
     return Math.abs(a.maxRank - rank) - Math.abs(b.maxRank - rank);
   })[0];
 };
+
 
 export const getPredictionPercent = (rank: number, cutoffRank: number) => {
   const diff = cutoffRank - rank;

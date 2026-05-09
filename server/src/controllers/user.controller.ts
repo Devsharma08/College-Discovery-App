@@ -38,6 +38,7 @@ export const getFavorites = async (req: AuthRequest, res: Response): Promise<voi
   }
 };
 
+
 export const toggleFavorite = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;

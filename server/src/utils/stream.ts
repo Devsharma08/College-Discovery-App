@@ -8,15 +8,15 @@ type StreamPayload = {
 
 export const beginNdjsonStream = (res: Response) => {
   res.status(200);
-  res.setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx/Render
-  res.flushHeaders?.();
+  (res as any).setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
+  (res as any).setHeader('Cache-Control', 'no-cache, no-transform');
+  (res as any).setHeader('Connection', 'keep-alive');
+  (res as any).setHeader('X-Accel-Buffering', 'no'); // Disable buffering for Nginx/Render
+  (res as any).flushHeaders?.();
 };
 
 export const writeNdjson = (res: Response, payload: StreamPayload) => {
-  res.write(`${JSON.stringify(payload)}\n`);
+  (res as any).write(`${JSON.stringify(payload)}\n`);
 };
 
 export const streamSection = async <T>(
