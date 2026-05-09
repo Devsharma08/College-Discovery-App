@@ -53,8 +53,6 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-  'https://college-discovery-app-pv2yerku3-users-projects-426e2b02.vercel.app',
-  'https://college-discovery-app-one.vercel.app',
   'https://college-discovery-app-pzv7.vercel.app',
 ].filter(Boolean);
 
