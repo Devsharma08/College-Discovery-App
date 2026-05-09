@@ -7,7 +7,7 @@ type StreamPayload = {
 };
 
 export const beginNdjsonStream = (res: Response) => {
-  res.status(200);
+  (res as any).status(200);
   (res as any).setHeader('Content-Type', 'application/x-ndjson; charset=utf-8');
   (res as any).setHeader('Cache-Control', 'no-cache, no-transform');
   (res as any).setHeader('Connection', 'keep-alive');

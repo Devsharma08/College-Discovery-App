@@ -5,7 +5,7 @@ export interface AuthRequest extends Request {
   user?: { userId: string; role: string };
 }
 
-export const protect = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const protect = (req: any, res: any, next: any): void => {
   const bearer = req.headers.authorization;
 
   if (!bearer || !bearer.startsWith('Bearer ')) {

@@ -382,5 +382,5 @@ export const streamCollegeDetail = asyncHandler(async (req: Request, res: Respon
   ]);
 
   writeNdjson(res, { type: 'done' });
-  res.end();
+  (res as any).end();
 });

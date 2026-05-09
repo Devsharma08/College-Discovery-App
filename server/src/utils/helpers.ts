@@ -40,7 +40,7 @@ export const getBestCutoffForRank = (college: CollegeWithCutoffs, exam: string, 
   const categoryMatches = (cutoff: { category?: string | null }) =>
     !normalizedCategory || normalizeText(cutoff.category || 'General') === normalizedCategory;
 
-  const examCutoffs = college.cutoffs.filter((cutoff) => isExamMatch(cutoff.examName, exam));
+  const examCutoffs = college.cutoffs.filter((cutoff: any) => isExamMatch(cutoff.examName, exam));
   const preferredCutoffs = examCutoffs.filter(categoryMatches);
   const fallbackCutoffs = preferredCutoffs.length > 0
     ? preferredCutoffs
