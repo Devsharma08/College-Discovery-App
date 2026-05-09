@@ -42,7 +42,6 @@ interface GeneralCourse {
   regulatoryRules: string;
   opportunities: string;
   bestBranchNote: string;
-  bestBranchNote: string;
   specializations: Specialization[];
   topColleges: College[];
 }
@@ -63,11 +62,11 @@ const COURSE_HUB: GeneralCourse[] = [
       { name: 'Mechanical Engineering', isBest: false, reason: 'EV and Automation focus', avgPackage: '6-15 LPA', demand: 'Medium' }
     ],
     topColleges: [
-      { id: 'iitm', name: 'IIT Madras', city: 'Chennai', state: 'Tamil Nadu', rating: 4.9, fees: 220000, imgUrl: '', popularFor: 'Engineering' },
-      { id: 'iitd', name: 'IIT Delhi', city: 'New Delhi', state: 'Delhi', rating: 4.8, fees: 215000, imgUrl: '', popularFor: 'Engineering' },
-      { id: 'iitb', name: 'IIT Bombay', city: 'Mumbai', state: 'Maharashtra', rating: 4.8, fees: 230000, imgUrl: '', popularFor: 'Engineering' },
-      { id: 'bits', name: 'BITS Pilani', city: 'Pilani', state: 'Rajasthan', rating: 4.7, fees: 550000, imgUrl: '', popularFor: 'Engineering' },
-      { id: 'nitt', name: 'NIT Trichy', city: 'Tiruchirappalli', state: 'Tamil Nadu', rating: 4.6, fees: 180000, imgUrl: '', popularFor: 'Engineering' }
+      { id: 'iitm', name: 'IIT Madras', city: 'Chennai', state: 'Tamil Nadu', location: 'Chennai, Tamil Nadu', rating: 4.9, fees: 220000, imgUrl: '', popularFor: 'Engineering' },
+      { id: 'iitd', name: 'IIT Delhi', city: 'New Delhi', state: 'Delhi', location: 'New Delhi, Delhi', rating: 4.8, fees: 215000, imgUrl: '', popularFor: 'Engineering' },
+      { id: 'iitb', name: 'IIT Bombay', city: 'Mumbai', state: 'Maharashtra', location: 'Mumbai, Maharashtra', rating: 4.8, fees: 230000, imgUrl: '', popularFor: 'Engineering' },
+      { id: 'bits', name: 'BITS Pilani', city: 'Pilani', state: 'Rajasthan', location: 'Pilani, Rajasthan', rating: 4.7, fees: 550000, imgUrl: '', popularFor: 'Engineering' },
+      { id: 'nitt', name: 'NIT Trichy', city: 'Tiruchirappalli', state: 'Tamil Nadu', location: 'Tiruchirappalli, Tamil Nadu', rating: 4.6, fees: 180000, imgUrl: '', popularFor: 'Engineering' }
     ]
   },
   {
@@ -85,11 +84,11 @@ const COURSE_HUB: GeneralCourse[] = [
       { name: 'Human Resources', isBest: false, reason: 'People & Culture focus', avgPackage: '8-18 LPA', demand: 'Medium' }
     ],
     topColleges: [
-      { id: 'iima', name: 'IIM Ahmedabad', city: 'Ahmedabad', state: 'Gujarat', rating: 4.9, fees: 2500000, imgUrl: '', popularFor: 'Management' },
-      { id: 'iimb', name: 'IIM Bangalore', city: 'Bengaluru', state: 'Karnataka', rating: 4.9, fees: 2450000, imgUrl: '', popularFor: 'Management' },
-      { id: 'iimc', name: 'IIM Calcutta', city: 'Kolkata', state: 'West Bengal', rating: 4.8, fees: 2400000, imgUrl: '', popularFor: 'Management' },
-      { id: 'xlri', name: 'XLRI Jamshedpur', city: 'Jamshedpur', state: 'Jharkhand', rating: 4.7, fees: 2300000, imgUrl: '', popularFor: 'Management' },
-      { id: 'fms', name: 'FMS Delhi', city: 'New Delhi', state: 'Delhi', rating: 4.7, fees: 200000, imgUrl: '', popularFor: 'Management' }
+      { id: 'iima', name: 'IIM Ahmedabad', city: 'Ahmedabad', state: 'Gujarat', location: 'Ahmedabad, Gujarat', rating: 4.9, fees: 2500000, imgUrl: '', popularFor: 'Management' },
+      { id: 'iimb', name: 'IIM Bangalore', city: 'Bengaluru', state: 'Karnataka', location: 'Bengaluru, Karnataka', rating: 4.9, fees: 2450000, imgUrl: '', popularFor: 'Management' },
+      { id: 'iimc', name: 'IIM Calcutta', city: 'Kolkata', state: 'West Bengal', location: 'Kolkata, West Bengal', rating: 4.8, fees: 2400000, imgUrl: '', popularFor: 'Management' },
+      { id: 'xlri', name: 'XLRI Jamshedpur', city: 'Jamshedpur', state: 'Jharkhand', location: 'Jamshedpur, Jharkhand', rating: 4.7, fees: 2300000, imgUrl: '', popularFor: 'Management' },
+      { id: 'fms', name: 'FMS Delhi', city: 'New Delhi', state: 'Delhi', location: 'New Delhi, Delhi', rating: 4.7, fees: 200000, imgUrl: '', popularFor: 'Management' }
     ]
   },
   {
@@ -107,11 +106,11 @@ const COURSE_HUB: GeneralCourse[] = [
       { name: 'Pharmacy (B.Pharm)', isBest: false, reason: 'Drug research & pharma', avgPackage: '4-10 LPA', demand: 'Trending' }
     ],
     topColleges: [
-      { id: 'aiims', name: 'AIIMS Delhi', city: 'New Delhi', state: 'Delhi', rating: 4.9, fees: 1628, imgUrl: '', popularFor: 'Medicine' },
-      { id: 'cmc', name: 'CMC Vellore', city: 'Vellore', state: 'Tamil Nadu', rating: 4.8, fees: 52000, imgUrl: '', popularFor: 'Medicine' },
-      { id: 'jipmer', name: 'JIPMER Puducherry', city: 'Puducherry', state: 'Puducherry', rating: 4.7, fees: 12000, imgUrl: '', popularFor: 'Medicine' },
-      { id: 'kgmu', name: 'KGMU Lucknow', city: 'Lucknow', state: 'Uttar Pradesh', rating: 4.6, fees: 54000, imgUrl: '', popularFor: 'Medicine' },
-      { id: 'bmc', name: 'BMC Bangalore', city: 'Bengaluru', state: 'Karnataka', rating: 4.5, fees: 70000, imgUrl: '', popularFor: 'Medicine' }
+      { id: 'aiims', name: 'AIIMS Delhi', city: 'New Delhi', state: 'Delhi', location: 'New Delhi, Delhi', rating: 4.9, fees: 1628, imgUrl: '', popularFor: 'Medicine' },
+      { id: 'cmc', name: 'CMC Vellore', city: 'Vellore', state: 'Tamil Nadu', location: 'Vellore, Tamil Nadu', rating: 4.8, fees: 52000, imgUrl: '', popularFor: 'Medicine' },
+      { id: 'jipmer', name: 'JIPMER Puducherry', city: 'Puducherry', state: 'Puducherry', location: 'Puducherry, Puducherry', rating: 4.7, fees: 12000, imgUrl: '', popularFor: 'Medicine' },
+      { id: 'kgmu', name: 'KGMU Lucknow', city: 'Lucknow', state: 'Uttar Pradesh', location: 'Lucknow, Uttar Pradesh', rating: 4.6, fees: 54000, imgUrl: '', popularFor: 'Medicine' },
+      { id: 'bmc', name: 'BMC Bangalore', city: 'Bengaluru', state: 'Karnataka', location: 'Bengaluru, Karnataka', rating: 4.5, fees: 70000, imgUrl: '', popularFor: 'Medicine' }
     ]
   }
 ];
