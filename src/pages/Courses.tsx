@@ -171,8 +171,9 @@ const Courses: React.FC<CoursesProps> = ({ addToCompare, toggleSave, savedIds, c
         <div className="absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-emerald-500/10 blur-3xl" />
         
         <div className="relative z-10 max-w-4xl">
-          <div className="eyebrow mb-8 bg-white/10 text-white border-white/20">
-            <GraduationCap className="w-3.5 h-3.5" /> Program Intelligence 2026
+          <div className="eyebrow mb-8">
+            <GraduationCap className="w-3.5 text-white h-3.5" /> 
+            <span className="text-white/80 pl-1.5">Program Intelligence 2026</span>
           </div>
           <h1 className="text-4xl font-black sm:text-7xl tracking-tighter leading-[0.95] mb-8">
             Academic <span className="text-emerald-400">Pathways</span> & Specializations

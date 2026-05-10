@@ -56,10 +56,12 @@ const AppContent: React.FC = () => {
       return [];
     }
   });
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const { user, token, logout, isLoading } = useAuth();
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/auth';
   const savedIds = useMemo(() => new Set(savedColleges.map((college) => college.id)), [savedColleges]);
   const compareIds = useMemo(() => new Set(compareList.map((college) => college.id)), [compareList]);
 
@@ -86,6 +88,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('savedColleges', JSON.stringify(savedColleges));
   }, [savedColleges]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   const addToCompare = (college: College) => {
     if (compareList.length >= 3) {
@@ -157,11 +163,12 @@ const AppContent: React.FC = () => {
       <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-40 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),transparent)]" />
       <Toaster position="top-center" toastOptions={{ className: 'rounded-2xl border border-slate-200 shadow-xl' }} />
       
+      {!isAuthPage && (
       <nav className="sticky top-0 z-50 border-b border-white/70 bg-[#fbfaf7]/80 backdrop-blur-3xl shadow-sm transition-all duration-300">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between">
-            <div className="flex items-center justify-between w-full md:w-auto">
-              <Link to="/" className="flex items-center gap-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between relative">
+            <div className="flex h-20 items-center justify-between w-full lg:w-auto">
+              <Link to="/" className="flex items-center gap-3" onClick={() => setIsMenuOpen(false)}>
                 <div className="rounded-2xl bg-[#203d1f] p-2.5 shadow-lg shadow-emerald-950/15">
                   <GraduationCap className="text-white w-6 h-6" />
                 </div>
@@ -171,7 +178,7 @@ const AppContent: React.FC = () => {
               </Link>
 
               {/* Mobile Toggle */}
-              <div className="md:hidden">
+              <div className="lg:hidden">
                 <input 
                   type="checkbox" 
                   id="nav-checkbox" 
@@ -186,7 +193,7 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className={`${isMenuOpen ? 'flex' : 'hidden'} md:flex flex-col md:flex-row flex-wrap items-center gap-2 rounded-2xl md:rounded-full border border-white/80 bg-white/65 p-4 md:p-1 text-sm shadow-sm shadow-slate-200/60 mt-4 md:mt-0 w-full md:w-auto animate-in fade-in slide-in-from-top-2`}>
+            <div className={`${isMenuOpen ? 'flex' : 'hidden'} lg:flex flex-col lg:flex-row flex-wrap items-center gap-2 rounded-2xl lg:rounded-full border border-white/80 bg-white/65 p-4 lg:p-1 text-sm shadow-xl lg:shadow-sm shadow-slate-200/60 mt-2 lg:mt-0 mb-4 lg:mb-0 w-full lg:w-auto animate-in fade-in slide-in-from-top-2 absolute lg:relative top-[calc(100%+0.5rem)] lg:top-auto left-0 lg:left-auto right-0 lg:right-auto z-[60] lg:z-auto backdrop-blur-2xl lg:backdrop-blur-none`}>
               <NavLink to="/" className={navClass} onClick={() => setIsMenuOpen(false)}>Home</NavLink>
               
               {/* Programs Dropdown */}
@@ -237,12 +244,12 @@ const AppContent: React.FC = () => {
                 <span className="inline-flex items-center gap-2"><BrainCircuit className="h-4 w-4" /> Predictor</span>
               </NavLink>
 
-              <div className="hidden md:block w-px h-6 bg-slate-200 mx-1"></div>
+              <div className="hidden lg:block w-px h-6 bg-slate-200 mx-1"></div>
               
               {user ? (
-                <div className="flex items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-2 w-full lg:w-auto">
                   {/* Desktop Dropdown */}
-                  <div className="hidden md:block relative group px-1">
+                  <div className="hidden lg:block relative group px-1">
                     <button className={`${navClass({ isActive: false })} flex items-center gap-2 pr-2`}>
                       <div className="w-6 h-6 rounded-full bg-[#203d1f] flex items-center justify-center text-white text-[10px] font-black uppercase">
                         {user.username?.[0] || 'U'}
@@ -265,7 +272,7 @@ const AppContent: React.FC = () => {
                   </div>
 
                   {/* Mobile Direct Links */}
-                  <div className="md:hidden flex flex-col gap-2 w-full border-t border-slate-100 pt-4 mt-2">
+                  <div className="lg:hidden flex flex-col gap-2 w-full border-t border-slate-100 pt-4 mt-2">
                     <Link to="/profile" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 bg-slate-50" onClick={() => setIsMenuOpen(false)}>
                       <UserIcon className="w-4 h-4" /> My Profile
                     </Link>
@@ -285,7 +292,7 @@ const AppContent: React.FC = () => {
         </div>
 
         {/* Quick Links / Program Bar - Sticky */}
-        <div className="sticky top-20 z-40 border-t border-white/40 bg-white/40 backdrop-blur-md hidden md:block">
+        <div className="sticky top-20 z-40 border-t border-white/40 bg-white/40 backdrop-blur-md hidden lg:block">
           <div className="mx-auto max-w-7xl px-8 py-2.5 flex items-center justify-between">
             <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#203d1f] flex items-center gap-1.5 whitespace-nowrap">
@@ -309,6 +316,7 @@ const AppContent: React.FC = () => {
           </div>
         </div>
       </nav>
+      )}
 
       <main className="mx-auto max-w-7xl px-4 pt-10 pb-20 sm:px-6 lg:px-8">
         <Suspense fallback={<div className="flex min-h-[70vh] items-center justify-center"><EarthLoader message="Exploring the globe..." /></div>}>
@@ -361,68 +369,69 @@ const AppContent: React.FC = () => {
         </Suspense>
       </main>
 
-      {compareList.length > 0 && (
-        <div
-          className={`fixed inset-x-0 z-50 mx-auto w-[min(94vw,320px)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-            isMinimized ? 'bottom-2 translate-y-0' : 'bottom-6'
-          } animate-float-in`}
-        >
-          <div className={`surface overflow-hidden rounded-[2.5rem] shadow-2xl border border-slate-200/60 transition-all duration-500 ${isMinimized ? 'p-2' : 'p-5'}`}>
-            {/* Mini Handle/Indicator */}
-            <button 
-              onClick={() => setIsMinimized(!isMinimized)}
-              className="flex flex-col items-center w-full mb-2 cursor-pointer group/handle"
+      {!isAuthPage && compareList.length > 0 && (
+        isMinimized ? (
+          <div className="fixed bottom-24 right-6 sm:bottom-8 sm:right-8 z-50 animate-float-in">
+            <button
+              onClick={() => setIsMinimized(false)}
+              className="flex items-center justify-center w-14 h-14 rounded-full bg-[#203d1f] text-white shadow-2xl shadow-emerald-950/20 hover:scale-105 transition-transform relative group"
+              title="Open Comparison Tray"
             >
-              <div className={`h-1.5 rounded-full bg-slate-200 group-hover/handle:bg-[#31572c]/40 transition-all ${isMinimized ? 'w-12' : 'w-8'}`} />
+              <Scale className="w-6 h-6" />
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#f4a261] text-[10px] font-black text-white shadow-sm ring-2 ring-white">
+                {compareList.length}
+              </span>
             </button>
-
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-400">
-                <Scale className={`w-3.5 h-3.5 ${isMinimized ? 'text-slate-300' : 'text-[#31572c]'}`} /> {isMinimized ? 'Compare' : 'Comparison Tray'}
-                {!isMinimized && <span className="ml-1 text-[#31572c]">{compareList.length}/3</span>}
-              </h3>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setIsMinimized(!isMinimized)}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400"
-                  title={isMinimized ? "Expand" : "Minimize"}
-                >
-                  {isMinimized ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                </button>
-                {isMinimized && (
-                  <Link to="/compare" className="text-[#31572c] hover:scale-110 transition-transform">
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                )}
-              </div>
-            </div>
-            
-            {!isMinimized && (
-              <>
-                <div className="space-y-1.5 mb-5 max-h-[160px] overflow-y-auto no-scrollbar">
-                  {compareList.map(c => (
-                    <div key={c.id} className="flex items-center justify-between rounded-xl bg-slate-50/80 p-2.5 border border-slate-100 group">
-                      <span className="text-[11px] font-black text-slate-800 truncate pr-4 leading-none">{c.name}</span>
-                      <button onClick={() => removeFromCompare(c.id)} className="text-slate-300 hover:text-red-500 transition-colors shrink-0" aria-label={`Remove ${c.name}`}>
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <Link 
-                  to="/compare"
-                  className="btn-val group/btn w-full"
-                >
-                  <span className="btn-val_lg bg-[#203d1f] !py-3 !text-white">
-                    <span className="btn-val_sl bg-[#31572c]"></span>
-                    <span className="btn-val_text text-[10px]">Compare Analytics</span>
-                  </span>
-                </Link>
-              </>
-            )}
           </div>
-        </div>
+        ) : (
+          <div className="fixed inset-x-0 bottom-24 sm:bottom-8 z-50 mx-auto w-[min(94vw,320px)] animate-float-in">
+            <div className="surface overflow-hidden rounded-[2.5rem] shadow-2xl border border-slate-200/60 p-5">
+              <button 
+                onClick={() => setIsMinimized(true)}
+                className="flex flex-col items-center w-full mb-2 cursor-pointer group/handle"
+              >
+                <div className="h-1.5 rounded-full bg-slate-200 group-hover/handle:bg-[#31572c]/40 transition-all w-8" />
+              </button>
+
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2 text-slate-400">
+                  <Scale className="w-3.5 h-3.5 text-[#31572c]" /> Comparison Tray
+                  <span className="ml-1 text-[#31572c]">{compareList.length}/3</span>
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setIsMinimized(true)}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400"
+                    title="Minimize"
+                  >
+                    <ArrowDown className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-1.5 mb-5 max-h-[160px] overflow-y-auto no-scrollbar">
+                {compareList.map(c => (
+                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-slate-50/80 p-2.5 border border-slate-100 group">
+                    <span className="text-[11px] font-black text-slate-800 truncate pr-4 leading-none">{c.name}</span>
+                    <button onClick={() => removeFromCompare(c.id)} className="text-slate-300 hover:text-red-500 transition-colors shrink-0" aria-label={`Remove ${c.name}`}>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <Link 
+                to="/compare"
+                className="btn-val group/btn w-full"
+              >
+                <span className="btn-val_lg bg-[#203d1f] !py-3 !text-white">
+                  <span className="btn-val_sl bg-[#31572c]"></span>
+                  <span className="btn-val_text text-[10px]">Compare Analytics</span>
+                </span>
+              </Link>
+            </div>
+          </div>
+        )
       )}
     </div>
   );

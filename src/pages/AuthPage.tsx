@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
-import { GraduationCap, Loader2, Mail, Lock, User } from 'lucide-react';
+import { GraduationCap, Loader2, Mail, Lock, User, Info } from 'lucide-react';
 import { getErrorMessage, postJson } from '../lib/api';
 
 const AuthPage: React.FC = () => {
@@ -74,8 +74,15 @@ const AuthPage: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
+              <>
+                <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-800 border border-amber-200/60 mb-2">
+                  <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="font-medium leading-relaxed">
+                    Please use <strong className="font-black text-amber-900">dummy details</strong>. There is no cross-auth service implied.
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">Username</label>
                 <div className="relative">
                   <User className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
                   <input
@@ -88,6 +95,7 @@ const AuthPage: React.FC = () => {
                   />
                 </div>
               </div>
+              </>
             )}
             
             <div>
