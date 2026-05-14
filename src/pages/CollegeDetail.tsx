@@ -1,11 +1,10 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import EarthLoader from '../components/EarthLoader';
 import { useParams } from 'react-router-dom';
 import { API_URL } from '../config';
 import { MapPin, Star, GraduationCap, BookOpen, Trophy, Info, Scale, MessageSquare, Bookmark, Send, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getHeroImage } from '../lib/collegeImages';
-import { Skeleton, TextSkeleton } from '../components/Skeleton';
+import { Skeleton, TextSkeleton, DetailHeroSkeleton, QASkeleton, ReviewsSkeleton, EventsSkeleton } from '../components/Skeleton';
 import { apiFetch, getErrorMessage, readNdjsonStream } from '../lib/api';
 
 const AdmissionPredictor = lazy(() => import('../components/AdmissionPredictor'));
@@ -258,11 +257,7 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
   };
 
 
-  if (loading && !college) return (
-    <div className="flex flex-col items-center justify-center py-40">
-      <EarthLoader message="Locating institution..." />
-    </div>
-  );
+  if (loading && !college) return <DetailHeroSkeleton />;
 
   return (
     <div className="animate-page-in space-y-10">
@@ -352,8 +347,22 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
             </div>
 
             {courses.length === 0 ? (
-              <div className="space-y-4">
-                <Skeleton className="h-16 w-full" count={3} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 skeleton-shimmer rounded-lg" />
+                      <div className="space-y-2">
+                        <div className="h-4 skeleton-shimmer rounded w-32" />
+                        <div className="h-3 skeleton-shimmer rounded w-24" />
+                      </div>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <div className="h-4 skeleton-shimmer rounded w-20 ml-auto" />
+                      <div className="h-3 skeleton-shimmer rounded w-16 ml-auto" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -382,9 +391,11 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {!placements ? (
               <div className="surface p-8 rounded-3xl space-y-4">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <Skeleton className="h-12 w-1/2" />
-                <Skeleton className="h-6 w-1/3" />
+                <div className="w-10 h-10 skeleton-shimmer rounded-lg" />
+                <div className="h-6 skeleton-shimmer rounded w-48" />
+                <div className="h-12 skeleton-shimmer rounded-xl w-24" />
+                <div className="h-4 skeleton-shimmer rounded w-36" />
+                <div className="h-4 skeleton-shimmer rounded w-40" />
               </div>
             ) : placements.length > 0 ? (
               <div className="surface p-8 rounded-3xl">
@@ -511,7 +522,9 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
         </form>
 
         <div className="space-y-6">
-          {questions.length === 0 ? (
+          {loading && questions.length === 0 ? (
+            <QASkeleton />
+          ) : questions.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-slate-400">No questions yet. Be the first to ask!</p>
             </div>
@@ -643,7 +656,7 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {!reviews ? (
-            <Skeleton className="h-32 w-full rounded-2xl" count={2} />
+            <ReviewsSkeleton />
           ) : reviews.length > 0 ? (
             reviews.map((r: any) => (
               <div key={r.id} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm space-y-3 hover:border-slate-200 transition-colors">
@@ -677,9 +690,7 @@ const CollegeDetail: React.FC<CollegeDetailProps> = ({ addToCompare, toggleSave,
           <BookOpen className="text-[#31572c]" /> Upcoming Events
         </h2>
         {!events ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Skeleton className="h-32 w-full rounded-2xl" count={3} />
-          </div>
+          <EventsSkeleton />
         ) : events.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {events.map((ev: any) => (

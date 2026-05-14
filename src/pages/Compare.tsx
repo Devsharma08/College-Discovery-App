@@ -4,6 +4,7 @@ import { Scale, X, MapPin, Star, IndianRupee, GraduationCap, CheckCircle2, Loade
 import type { College } from '../types';
 import { Link } from 'react-router-dom';
 import { getCollegeImage } from '../lib/collegeImages';
+import { CompareTableSkeleton } from '../components/Skeleton';
 import { getErrorMessage, postJson, readSseTextStream } from '../lib/api';
 
 interface CompareProps {
@@ -160,11 +161,10 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
       </div>
 
       {loading && (
-        <div className="surface-subtle flex items-center justify-center gap-3 rounded-2xl p-4 text-sm font-semibold text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Refreshing comparison
-        </div>
+        <CompareTableSkeleton count={compareList.length} />
       )}
 
+      {!loading && (
       <div className="overflow-x-auto pb-10">
         <div className="inline-block min-w-full align-middle">
           <div className="surface overflow-hidden rounded-[2rem]">
@@ -315,6 +315,7 @@ const Compare: React.FC<CompareProps> = ({ compareList, removeFromCompare }) => 
           </div>
         </div>
       </div>
+      )}
 
       <div className="max-w-5xl mx-auto pt-8 pb-20">
         <div className="surface p-8 rounded-[2rem] shadow-sm border border-emerald-100 bg-emerald-50/10">

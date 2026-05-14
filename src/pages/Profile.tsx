@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
 import { toast } from 'react-hot-toast';
 import { Filter, Search } from 'lucide-react';
-import { Skeleton } from '../components/Skeleton';
+import { ProfileSkeleton, CollegeGridSkeleton } from '../components/Skeleton';
 import CollegeCard from '../components/CollegeCard';
 import { Link } from 'react-router-dom';
 import type { College } from '../types';
@@ -95,22 +95,7 @@ const Profile: React.FC = () => {
   };
 
   if (isLoading) {
-    return (
-      <div className="max-w-4xl mx-auto py-8 space-y-8">
-        <div className="surface p-8 rounded-3xl space-y-6">
-          <div className="flex gap-4">
-            <Skeleton className="w-16 h-16 rounded-full" />
-            <div className="space-y-2 py-2">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-6 pt-6">
-            <Skeleton className="h-20 w-full rounded-xl" count={4} />
-          </div>
-        </div>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!user && !isLoading) {
@@ -242,11 +227,7 @@ const Profile: React.FC = () => {
           </div>
 
           {loadingColleges ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="surface h-[400px] rounded-3xl animate-pulse bg-slate-50" />
-              ))}
-            </div>
+            <CollegeGridSkeleton count={4} cols="md:grid-cols-2" />
           ) : colleges.length === 0 ? (
             <div className="surface p-20 rounded-[3rem] text-center space-y-4">
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto">

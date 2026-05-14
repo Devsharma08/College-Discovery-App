@@ -25,6 +25,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { API_URL } from '../config';
 import type { College } from '../types';
+import { CourseRankingSkeleton } from '../components/Skeleton';
 
 interface Specialization {
   name: string;
@@ -312,9 +313,7 @@ const Courses: React.FC<CoursesProps> = ({ addToCompare, toggleSave, savedIds, c
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-32 bg-slate-50 rounded-3xl animate-pulse" />
-                ))
+                <CourseRankingSkeleton />
               ) : colleges.map((college, index) => (
                 <div key={college.id} className="group relative p-6 rounded-3xl bg-white border border-slate-100 hover:border-emerald-200 transition-all hover:shadow-xl hover:-translate-y-1">
                   <div className="flex items-center gap-5 mb-4">

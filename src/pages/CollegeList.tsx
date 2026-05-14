@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Filter, Loader2, Search } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import type { College } from '../types';
 import { API_URL } from '../config';
 import CollegeCard from '../components/CollegeCard';
+import { CollegeGridSkeleton, CardSkeleton } from '../components/Skeleton';
 import { apiFetch, getErrorMessage } from '../lib/api';
 import { getCollegeFilterMeta } from '../lib/collegeFilters';
 
@@ -321,25 +322,7 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
           )}
 
           {initialLoading ? (
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="surface flex flex-col overflow-hidden rounded-3xl animate-pulse">
-                  <div className="h-64 bg-slate-200" />
-                  <div className="p-6 space-y-4">
-                    <div className="h-6 bg-slate-200 rounded w-3/4" />
-                    <div className="flex gap-2">
-                      <div className="h-5 bg-slate-200 rounded w-16" />
-                      <div className="h-5 bg-slate-200 rounded w-16" />
-                    </div>
-                    <div className="h-4 bg-slate-200 rounded w-1/2" />
-                    <div className="pt-4 border-t border-slate-100 flex justify-between">
-                      <div className="h-8 bg-slate-200 rounded w-24" />
-                      <div className="h-8 bg-slate-200 rounded w-8" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CollegeGridSkeleton count={6} cols="md:grid-cols-2" />
           ) : colleges.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
               <div className="bg-slate-100 p-5 rounded-full">
@@ -371,8 +354,10 @@ const CollegeList: React.FC<CollegeListProps> = ({ addToCompare, toggleSave, sav
           )}
 
       {loadingMore && !initialLoading && (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-[#31572c]" />
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 py-4">
+          {[...Array(3)].map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
       )}
 

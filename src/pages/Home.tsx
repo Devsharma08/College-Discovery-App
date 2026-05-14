@@ -20,7 +20,7 @@ import {
   Trophy
 } from 'lucide-react';
 import { useCollegeHome } from '../context/collegeHome';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton, FeaturedCollegesSkeleton } from '../components/Skeleton';
 import { getErrorMessage } from '../lib/api';
 import { getCollegeFilterMeta } from '../lib/collegeFilters';
 
@@ -64,7 +64,7 @@ const commonQuestions = [
 ];
 
 const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compareIds, toggleSave, addToCompare }) => {
-  const { colleges } = useCollegeHome();
+  const { colleges, loading: collegesLoading } = useCollegeHome();
   const [discussionQuestion, setDiscussionQuestion] = useState('');
   const [discussionItems, setDiscussionItems] = useState(discussionSeeds);
   
@@ -266,7 +266,9 @@ const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compare
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
             {isLoadingMeta ? (
-              <Skeleton className="h-28 w-full rounded-2xl" count={6} />
+              [...Array(6)].map((_, i) => (
+                <div key={i} className="h-32 skeleton-shimmer rounded-2xl" />
+              ))
             ) : (
               availableCourses.map((course) => (
                 <Link
@@ -300,7 +302,9 @@ const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compare
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               {isLoadingMeta ? (
-                <Skeleton className="h-24 w-full rounded-2xl" count={4} />
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="h-24 skeleton-shimmer rounded-2xl" />
+                ))
               ) : (
                 availableStates.map(state => (
                   <Link
@@ -332,16 +336,22 @@ const Home: React.FC<HomeProps> = ({ savedCount, compareCount, savedIds, compare
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {featuredColleges.map((college) => (
-            <CollegeCard
-              key={college.id}
-              college={college}
-              isSaved={savedIds.has(college.id)}
-              isInCompare={compareIds.has(college.id)}
-              toggleSave={toggleSave}
-              addToCompare={addToCompare}
-            />
-          ))}
+          {collegesLoading ? (
+            <FeaturedCollegesSkeleton />
+          ) : featuredColleges.length > 0 ? (
+            featuredColleges.map((college) => (
+              <CollegeCard
+                key={college.id}
+                college={college}
+                isSaved={savedIds.has(college.id)}
+                isInCompare={compareIds.has(college.id)}
+                toggleSave={toggleSave}
+                addToCompare={addToCompare}
+              />
+            ))
+          ) : (
+            <FeaturedCollegesSkeleton />
+          )}
         </div>
       </section>
 
